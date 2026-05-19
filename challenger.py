@@ -125,7 +125,8 @@ if __name__ == "__main__":
 
     #folder = "project_description_agent_synthetic_dataset/bundle_001_internal_kb_chatbot"
     #folder = "project_description_agent_synthetic_dataset/bundle_002_invoice_processing_app"
-    folder = "project_description_agent_synthetic_dataset/bundle_007_zabka"
+    folder = "project_description_agent_synthetic_dataset/bundle_006_orange"
+    #folder = "project_description_agent_synthetic_dataset/bundle_007_zabka"
 
 
     extraction = run_extraction(folder)

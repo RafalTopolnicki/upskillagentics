@@ -1,7 +1,7 @@
+import base64
 import json
 import os
 import anthropic
-import fitz
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -10,11 +10,6 @@ client = anthropic.Anthropic()
 
 SKIP_FILES = {"expected_findings.json", "dataset_manifest.json"}
 
-def _read_pdf(path: str) -> str:
-    doc = fitz.open(path)
-    text = "\n".join(page.get_text() for page in doc)
-    doc.close()
-    return text
 
 def load_bundle(folder: str) -> list[dict]:
     docs = []
@@ -23,15 +18,14 @@ def load_bundle(folder: str) -> list[dict]:
             continue
         path = os.path.join(folder, fname)
         if fname.endswith(".pdf"):
-            content = _read_pdf(path)
-            if not content.strip():
-                print(f"[warn] {fname}: no text extracted (scanned PDF?)")
-                continue
-            docs.append({"filename": fname, "content": content})
+            with open(path, "rb") as f:
+                data = base64.standard_b64encode(f.read()).decode("utf-8")
+            docs.append({"filename": fname, "type": "pdf", "data": data})
         elif fname.endswith((".md", ".txt")):
             with open(path) as f:
-                docs.append({"filename": fname, "content": f.read()})
+                docs.append({"filename": fname, "type": "text", "content": f.read()})
     return docs
+
 
 def log_cache_usage(tag: str, usage) -> None:
     created = getattr(usage, "cache_creation_input_tokens", 0) or 0
@@ -45,18 +39,32 @@ def log_cache_usage(tag: str, usage) -> None:
         print(f"[CACHE:{tag}] no cache activity, input={regular} tokens")
 
 
-def build_docs_block(docs: list[dict]) -> dict:
-    bundle = "\n\n".join(f"=== {d['filename']} ===\n{d['content']}" for d in docs)
-    return {
-        "type": "text",
-        "text": f"## Source documents\n\n{bundle}",
-        "cache_control": {"type": "ephemeral"},
-    }
+def build_docs_blocks(docs: list[dict]) -> list[dict]:
+    blocks = []
+    for doc in docs:
+        if doc["type"] == "pdf":
+            blocks.append({
+                "type": "document",
+                "source": {
+                    "type": "base64",
+                    "media_type": "application/pdf",
+                    "data": doc["data"],
+                },
+                "title": doc["filename"],
+            })
+        else:
+            blocks.append({
+                "type": "text",
+                "text": f"=== {doc['filename']} ===\n{doc['content']}",
+            })
+    if blocks:
+        blocks[-1]["cache_control"] = {"type": "ephemeral"}
+    return blocks
 
 
 def build_analysis_prompt(docs: list[dict]) -> list[dict]:
     return [
-        build_docs_block(docs),
+        *build_docs_blocks(docs),
         {
             "type": "text",
             "text": """You are analyzing a set of project input documents shown above.
@@ -90,7 +98,6 @@ def run_analysis(folder: str) -> dict:
 
     log_cache_usage("ANALYSIS", response.usage)
     raw = response.content[0].text.strip()
-    # Strip markdown code fences if the model added them
     if raw.startswith("```"):
         raw = raw.split("```", 2)[1]
         if raw.startswith("json"):
@@ -99,6 +106,7 @@ def run_analysis(folder: str) -> dict:
     result = json.loads(raw)
     print(f"[ANALYSIS] Found {len(result.get('gaps', []))} gap(s), {len(result.get('contradictions', []))} contradiction(s), {len(result.get('clarifying_questions', []))} question(s)")
     return result
+
 
 if __name__ == "__main__":
     result = run_analysis("project_description_agent_synthetic_dataset/bundle_001_internal_kb_chatbot")

@@ -2,7 +2,7 @@ import json
 import os
 import anthropic
 from dotenv import load_dotenv
-from analysis_pass import load_bundle, run_analysis, build_docs_block, log_cache_usage
+from analysis_pass import load_bundle, run_analysis, build_docs_blocks, log_cache_usage
 
 load_dotenv()
 
@@ -31,7 +31,7 @@ def get_answer(topic: str, question: str, mock_answers: dict) -> str:
 def build_sufficiency_prompt(docs: list[dict], qa_pairs: list[dict]) -> list[dict]:
     qa_text = "\n".join(f"Q: {qa['question']}\nA: {qa['answer']}" for qa in qa_pairs)
     return [
-        build_docs_block(docs),
+        *build_docs_blocks(docs),
         {
             "type": "text",
             "text": f"""You are assessing whether you have enough information to write a clear Project Brief and Implementation PRD.

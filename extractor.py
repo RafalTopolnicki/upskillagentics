@@ -1,6 +1,6 @@
 import anthropic
 from dotenv import load_dotenv
-from analysis_pass import load_bundle, build_docs_block, log_cache_usage
+from analysis_pass import load_bundle, build_docs_blocks, log_cache_usage
 
 load_dotenv()
 
@@ -41,7 +41,7 @@ EXTRACTION_TOOL = {
 
 def build_extraction_prompt(docs: list[dict]) -> list[dict]:
     return [
-        build_docs_block(docs),
+        *build_docs_blocks(docs),
         {
             "type": "text",
             "text": """Extract every distinct requirement, constraint, or decision that is explicitly stated in the source documents shown above.
@@ -61,7 +61,7 @@ def run_extraction(folder: str) -> dict:
 
     response = client.beta.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=4096,
+        max_tokens=8192,
         betas=["prompt-caching-2024-07-31"],
         tools=[EXTRACTION_TOOL],
         tool_choice={"type": "tool", "name": "submit_facts"},
@@ -69,6 +69,13 @@ def run_extraction(folder: str) -> dict:
     )
 
     log_cache_usage("EXTRACTOR", response.usage)
+
+    if response.stop_reason == "max_tokens":
+        raise RuntimeError(
+            "[EXTRACTOR] Response truncated — document too large to extract all facts in one call. "
+            "Consider splitting the document or reducing its size."
+        )
+
     tool_use = next(b for b in response.content if b.type == "tool_use")
     facts = tool_use.input["facts"]
     print(f"[EXTRACTOR] Extracted {len(facts)} fact(s)")
