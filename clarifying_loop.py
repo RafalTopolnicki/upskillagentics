@@ -2,7 +2,7 @@ import json
 import os
 import anthropic
 from dotenv import load_dotenv
-from analysis_pass import load_bundle, run_analysis
+from analysis_pass import load_bundle, run_analysis, build_docs_block, log_cache_usage
 
 load_dotenv()
 
@@ -28,13 +28,13 @@ def get_answer(topic: str, question: str, mock_answers: dict) -> str:
     return answer
 
 
-def build_sufficiency_prompt(docs: list[dict], qa_pairs: list[dict]) -> str:
-    bundle = "\n\n".join(f"=== {d['filename']} ===\n{d['content']}" for d in docs)
+def build_sufficiency_prompt(docs: list[dict], qa_pairs: list[dict]) -> list[dict]:
     qa_text = "\n".join(f"Q: {qa['question']}\nA: {qa['answer']}" for qa in qa_pairs)
-    return f"""You are assessing whether you have enough information to write a clear Project Brief and Implementation PRD.
-
-## Source documents
-{bundle}
+    return [
+        build_docs_block(docs),
+        {
+            "type": "text",
+            "text": f"""You are assessing whether you have enough information to write a clear Project Brief and Implementation PRD.
 
 ## Clarifications collected so far
 {qa_text}
@@ -45,7 +45,9 @@ Return ONLY valid JSON:
 {{
   "sufficient": true or false,
   "follow_up_questions": ["only if sufficient is false — 1 to 3 remaining critical questions"]
-}}"""
+}}""",
+        },
+    ]
 
 
 def run_clarifying_loop(folder: str) -> dict:
@@ -70,13 +72,15 @@ def run_clarifying_loop(folder: str) -> dict:
 
     # Agent-driven follow-up rounds
     for round_num in range(MAX_ROUNDS):
-        prompt = build_sufficiency_prompt(docs, qa_pairs)
-        response = client.messages.create(
+        content = build_sufficiency_prompt(docs, qa_pairs)
+        response = client.beta.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=512,
-            messages=[{"role": "user", "content": prompt}],
+            betas=["prompt-caching-2024-07-31"],
+            messages=[{"role": "user", "content": content}],
         )
 
+        log_cache_usage(f"CLARIFY-round{round_num + 1}", response.usage)
         raw = response.content[0].text.strip()
         if raw.startswith("```"):
             raw = raw.split("```", 2)[1]

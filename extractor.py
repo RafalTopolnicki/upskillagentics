@@ -1,6 +1,6 @@
 import anthropic
 from dotenv import load_dotenv
-from analysis_pass import load_bundle
+from analysis_pass import load_bundle, build_docs_block, log_cache_usage
 
 load_dotenv()
 
@@ -39,33 +39,36 @@ EXTRACTION_TOOL = {
 }
 
 
-def build_extraction_prompt(docs: list[dict]) -> str:
-    bundle = "\n\n".join(f"=== {d['filename']} ===\n{d['content']}" for d in docs)
-    return f"""You are extracting facts from a set of project input documents.
-
-{bundle}
-
-Extract every distinct requirement, constraint, or decision that is explicitly stated in the documents.
+def build_extraction_prompt(docs: list[dict]) -> list[dict]:
+    return [
+        build_docs_block(docs),
+        {
+            "type": "text",
+            "text": """Extract every distinct requirement, constraint, or decision that is explicitly stated in the source documents shown above.
 Rules:
 - Each fact must be atomic (one requirement per fact).
 - Every fact must be grounded in a direct quote from a source document.
 - Do not infer, interpret, or combine facts — only extract what is explicitly written.
-- Do not include vague statements without a concrete quote to back them up."""
+- Do not include vague statements without a concrete quote to back them up.""",
+        },
+    ]
 
 
 def run_extraction(folder: str) -> dict:
     docs = load_bundle(folder)
     print(f"[EXTRACTOR] Extracting facts from {len(docs)} document(s)...")
-    prompt = build_extraction_prompt(docs)
+    content = build_extraction_prompt(docs)
 
-    response = client.messages.create(
+    response = client.beta.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=4096,
+        betas=["prompt-caching-2024-07-31"],
         tools=[EXTRACTION_TOOL],
         tool_choice={"type": "tool", "name": "submit_facts"},
-        messages=[{"role": "user", "content": prompt}],
+        messages=[{"role": "user", "content": content}],
     )
 
+    log_cache_usage("EXTRACTOR", response.usage)
     tool_use = next(b for b in response.content if b.type == "tool_use")
     facts = tool_use.input["facts"]
     print(f"[EXTRACTOR] Extracted {len(facts)} fact(s)")

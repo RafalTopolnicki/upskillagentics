@@ -123,7 +123,10 @@ if __name__ == "__main__":
     from clarifying_loop import run_clarifying_loop
     from writer import write_artifacts
 
-    folder = "project_description_agent_synthetic_dataset/bundle_001_internal_kb_chatbot"
+    #folder = "project_description_agent_synthetic_dataset/bundle_001_internal_kb_chatbot"
+    #folder = "project_description_agent_synthetic_dataset/bundle_002_invoice_processing_app"
+    folder = "project_description_agent_synthetic_dataset/bundle_007_zabka"
+
 
     extraction = run_extraction(folder)
     context = run_clarifying_loop(folder)
