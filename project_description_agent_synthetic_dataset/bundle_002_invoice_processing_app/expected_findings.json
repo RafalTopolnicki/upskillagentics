@@ -1,0 +1,43 @@
+{
+  "bundle_id": "bundle_002_invoice_processing_app",
+  "domain": "invoice_processing",
+  "must_detect_contradictions": [
+    {
+      "topic": "Accounting system integration",
+      "source_a": "prd_draft.md says direct accounting API integration is part of MVP",
+      "source_b": "transcript.txt says CSV export is enough for first version"
+    },
+    {
+      "topic": "Seven-year storage",
+      "source_a": "prd_draft.md says store invoices and extracted data for 7 years",
+      "source_b": "transcript.txt and constraints.md say the tool should not become legal archive/system of record"
+    },
+    {
+      "topic": "External OCR provider",
+      "source_a": "prd_draft.md allows external OCR if needed",
+      "source_b": "transcript.txt and constraints.md require EU data residency and caution against US-only processing"
+    }
+  ],
+  "must_ask_questions": [
+    "Is direct accounting-system API integration required for MVP, or is CSV export sufficient?",
+    "What is the required retention period for uploaded raw invoices and extracted data?",
+    "Are third-party OCR providers allowed, and must they process data only in the EU?",
+    "Should MVP support only machine-generated PDFs, or also scanned/handwritten invoices?"
+  ],
+  "must_include_requirements": [
+    "Users can upload invoice PDFs.",
+    "The system extracts key invoice fields.",
+    "Users can review and correct extracted fields before export.",
+    "The MVP supports CSV export.",
+    "Manual review is required before export."
+  ],
+  "must_not_include": [
+    "Handwritten invoices are required in MVP.",
+    "Email ingestion is required in MVP.",
+    "The tool is the legal accounting archive."
+  ],
+  "preferred_clarification_count": {
+    "min": 4,
+    "max": 7
+  }
+}

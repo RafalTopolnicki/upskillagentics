@@ -1,0 +1,27 @@
+Discovery call transcript
+
+Ola, Support Ops: Our main pain is that agents spend the morning sorting yesterday's tickets. A daily batch would already help.
+
+Rafał, Product: So real-time is not mandatory?
+
+Ola: Not for MVP. Daily or hourly processing is fine.
+
+Jan, Engineering: Zendesk integration may take time. Could we start with CSV export from Zendesk?
+
+Ola: Yes. We can export tickets manually for the prototype.
+
+Jan: What about auto-sending replies?
+
+Ola: Absolutely not in the first version. Drafts are okay, but agents must approve anything sent to customers.
+
+Rafał: Do you need German support?
+
+Ola: Later. Most of our volume is English and Polish.
+
+Jan: Analytics dashboard?
+
+Ola: Nice to have. For MVP, a CSV or simple summary table is enough.
+
+Rafał: What makes a ticket urgent?
+
+Ola: Enterprise customer, payment failure, security issue, or service outage. We need to define exact rules.

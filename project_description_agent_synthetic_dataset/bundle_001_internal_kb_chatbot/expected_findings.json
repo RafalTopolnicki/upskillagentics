@@ -1,0 +1,42 @@
+{
+  "bundle_id": "bundle_001_internal_kb_chatbot",
+  "domain": "internal_knowledge_base",
+  "must_detect_contradictions": [
+    {
+      "topic": "Slack integration in MVP",
+      "source_a": "prd_draft.md requires Slack integration in MVP",
+      "source_b": "transcript.txt says browser only is enough and Slack can come later"
+    },
+    {
+      "topic": "PDF support in MVP",
+      "source_a": "prd_draft.md says admins can upload Markdown and PDF files",
+      "source_b": "transcript.txt suggests Markdown first and PDFs later is probably fine"
+    },
+    {
+      "topic": "Authentication for demo",
+      "source_a": "prd_draft.md and Security say company SSO is required",
+      "source_b": "transcript.txt includes a suggestion of temporary shared password for demo"
+    }
+  ],
+  "must_ask_questions": [
+    "Is Slack integration part of the MVP or a post-MVP feature?",
+    "Should PDF ingestion be included in the MVP, or should the MVP support only Markdown/text documents?",
+    "Is company SSO mandatory for the demo/MVP?"
+  ],
+  "must_include_requirements": [
+    "Employees can ask natural-language questions.",
+    "Answers must include source citations.",
+    "The system should not answer unsupported questions and should say it does not know.",
+    "Admins or maintainers can add internal documents.",
+    "Public web search is not allowed."
+  ],
+  "must_not_include": [
+    "The chatbot can modify internal source documents.",
+    "Multi-tenant SaaS support is required.",
+    "The chatbot may answer from public web search."
+  ],
+  "preferred_clarification_count": {
+    "min": 3,
+    "max": 7
+  }
+}

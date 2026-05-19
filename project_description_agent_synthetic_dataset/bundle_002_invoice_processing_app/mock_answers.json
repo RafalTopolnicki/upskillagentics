@@ -1,0 +1,7 @@
+{
+  "accounting_integration_mvp": "CSV export is sufficient for MVP. API integration is post-MVP.",
+  "retention_period": "90 days for raw uploads. The tool is not a legal archive; finance keeps the originals.",
+  "ocr_provider_eu": "EU data residency is required. External OCR is allowed only if it processes data within the EU.",
+  "invoice_types_mvp": "Machine-generated PDFs only for MVP.",
+  "default": "Use the simpler option for MVP and revisit after the pilot."
+}

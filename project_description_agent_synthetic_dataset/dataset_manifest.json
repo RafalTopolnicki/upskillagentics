@@ -1,0 +1,20 @@
+{
+  "name": "project_description_agent_synthetic_dataset",
+  "version": "0.1",
+  "created": "2026-05-12",
+  "bundle_count": 5,
+  "bundles": [
+    "bundle_001_internal_kb_chatbot",
+    "bundle_002_invoice_processing_app",
+    "bundle_003_recruitment_screening_tool",
+    "bundle_004_customer_support_triage",
+    "bundle_005_field_inspection_mobile_app"
+  ],
+  "intended_use": "Evaluation and development of a Project Description Agent that produces a stakeholder brief and coding-agent implementation PRD from messy project inputs.",
+  "license": "Synthetic data generated for user project prototyping; no real client data.",
+  "recommended_supported_formats": [
+    ".md",
+    ".txt",
+    ".json"
+  ]
+}

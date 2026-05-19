@@ -1,0 +1,23 @@
+Discovery call transcript
+
+Anna, Operations Lead: We keep answering the same onboarding and HR questions in Slack. A chatbot could help a lot.
+
+Marek, Engineering Manager: For a prototype, I don't want Slack integration. Browser only is enough. Slack can come later once we know the answers are reliable.
+
+Anna: That's okay for a first internal demo, but eventually employees live in Slack.
+
+Julia, Security: Any employee-facing internal tool needs SSO. We should not create a separate password system.
+
+Marek: Agreed, SSO if it's easy. But if SSO slows us down too much, maybe use a temporary shared password for the demo?
+
+Julia: I would strongly prefer no shared passwords, even for a demo.
+
+Anna: Source citations are important. If the bot gives an answer, people should see where it came from.
+
+Marek: We also need some way to add documents. For the first version, maybe just a local folder or admin upload.
+
+Anna: PDF support would be nice because HR policies are PDFs.
+
+Marek: Markdown first, PDFs later is probably fine.
+
+Julia: One more thing: the bot should not answer if it cannot find evidence. It should say it doesn't know.

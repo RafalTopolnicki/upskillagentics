@@ -1,0 +1,25 @@
+Discovery call transcript
+
+Magda, HR Lead: Recruiters spend too much time reading CVs. We need summaries and structured extraction.
+
+Adam, Legal: I want to be careful about automated ranking. The tool should not make hiring decisions or imply that it objectively ranks people.
+
+Magda: But recruiters want to see the strongest matches first.
+
+Adam: We can show match signals, missing requirements, and notes, but avoid an overall score or automated rejection.
+
+Karol, Engineering: Could we generate a shortlist?
+
+Adam: A human can create a shortlist. The system should not auto-shortlist without review.
+
+Magda: We also need to compare against job requirements. For example, if the job requires Python and cloud experience, show whether each CV mentions those.
+
+Karol: Should we store candidate profiles for future jobs?
+
+Adam: Only if the candidate consent and retention rules allow it. We need to clarify this.
+
+Magda: For MVP, we can avoid long-term storage and just process a batch for one job opening.
+
+Karol: Any need for ATS integration?
+
+Magda: Not initially. File upload is enough.

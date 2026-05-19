@@ -1,0 +1,6 @@
+{
+  "slack_mvp": "Post-MVP. Browser only is enough for the initial release.",
+  "pdf_mvp": "Markdown and plain text only for MVP. PDF support can come later.",
+  "sso_required": "Yes, SSO is mandatory. No shared passwords, even for a demo.",
+  "default": "Use the simpler option for now and revisit after the pilot."
+}

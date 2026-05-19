@@ -1,0 +1,49 @@
+{
+  "bundle_id": "bundle_005_field_inspection_mobile_app",
+  "domain": "field_inspection",
+  "must_detect_contradictions": [
+    {
+      "topic": "Desktop/web vs mobile field use",
+      "source_a": "prd_draft.md assumes desktop browser support is enough",
+      "source_b": "transcript.txt and constraints.md say technicians primarily use phones"
+    },
+    {
+      "topic": "Internet connectivity",
+      "source_a": "prd_draft.md assumes technicians have internet access while working",
+      "source_b": "transcript.txt and constraints.md say connectivity is unreliable and offline capture matters"
+    },
+    {
+      "topic": "Authentication method",
+      "source_a": "prd_draft.md says email/password login",
+      "source_b": "transcript.txt says technicians already use Microsoft accounts and Microsoft login is preferred eventually"
+    },
+    {
+      "topic": "Checklist template management",
+      "source_a": "prd_draft.md says admin can manage checklist templates",
+      "source_b": "transcript.txt says first checklist can be hardcoded for pilot"
+    }
+  ],
+  "must_ask_questions": [
+    "Is offline capture with later sync required for MVP?",
+    "Should the MVP prioritize mobile phone usage over desktop browser usage?",
+    "What authentication method should be used for the pilot?",
+    "Is checklist template management required in MVP, or can the first checklist be hardcoded?",
+    "Is PDF export required, or is an HTML/report view acceptable for MVP?"
+  ],
+  "must_include_requirements": [
+    "Technicians can create inspection reports.",
+    "Technicians can fill checklist fields and notes.",
+    "Technicians can attach photos.",
+    "Reports are submitted or synced to the operations team.",
+    "Photo upload size should be controlled or compressed."
+  ],
+  "must_not_include": [
+    "Desktop-only experience is sufficient without clarification.",
+    "Reliable on-site internet can be assumed.",
+    "Admin checklist template management is definitely required in MVP without clarification."
+  ],
+  "preferred_clarification_count": {
+    "min": 4,
+    "max": 7
+  }
+}

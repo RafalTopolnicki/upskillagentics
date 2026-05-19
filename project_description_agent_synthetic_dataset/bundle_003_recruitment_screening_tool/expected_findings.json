@@ -1,0 +1,44 @@
+{
+  "bundle_id": "bundle_003_recruitment_screening_tool",
+  "domain": "recruitment",
+  "must_detect_contradictions": [
+    {
+      "topic": "Candidate ranking",
+      "source_a": "prd_draft.md says rank candidates from best to worst match",
+      "source_b": "transcript.txt and constraints.md warn against automated ranking or decisioning"
+    },
+    {
+      "topic": "Auto-shortlisting",
+      "source_a": "prd_draft.md says export a shortlist of top candidates",
+      "source_b": "transcript.txt says a human can create a shortlist and the system should not auto-shortlist without review"
+    },
+    {
+      "topic": "Long-term profile storage",
+      "source_a": "prd_draft.md says store profiles for future job openings",
+      "source_b": "transcript.txt and constraints.md say retention requires consent and may be avoided in MVP"
+    }
+  ],
+  "must_ask_questions": [
+    "Should the MVP avoid candidate ranking and instead show requirement-by-requirement match evidence?",
+    "Should shortlist export be user-selected only rather than automatically generated?",
+    "What retention policy should apply to candidate CVs and extracted profiles?",
+    "Should the MVP process only one job opening at a time?"
+  ],
+  "must_include_requirements": [
+    "Recruiters can upload a job description.",
+    "Recruiters can upload candidate CVs.",
+    "The system extracts structured candidate profiles.",
+    "The system compares candidate evidence against job requirements.",
+    "Human recruiters remain in control of decisions."
+  ],
+  "must_not_include": [
+    "The system automatically rejects candidates.",
+    "The system makes final hiring recommendations.",
+    "ATS integration is required in MVP.",
+    "The system infers protected attributes."
+  ],
+  "preferred_clarification_count": {
+    "min": 4,
+    "max": 7
+  }
+}

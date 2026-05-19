@@ -1,0 +1,25 @@
+Discovery call transcript
+
+Ewa, Finance Lead: We need this mainly for supplier invoices. Right now someone manually enters everything.
+
+Tomasz, Product: Is direct accounting-system integration required for MVP?
+
+Ewa: It would be great, but CSV export is enough for the first version. The accounting API is slow to get access to.
+
+Piotr, Engineering: For OCR, we can use a third-party service.
+
+Kasia, Compliance: Careful. Some invoices include personal data, and we need EU data residency. I don't want invoices processed by a US-only API.
+
+Piotr: Could we store documents in S3?
+
+Kasia: Only if we know the region and retention policy. The seven-year retention requirement applies to accounting records, but I'm not sure the MVP should become the legal archive.
+
+Ewa: Correct. The accounting system is the archive. This tool just helps prepare data. We don't need to store raw invoices forever.
+
+Tomasz: What about handwritten invoices?
+
+Ewa: Not in MVP. Most are machine-generated PDFs.
+
+Piotr: Should we support email ingestion?
+
+Ewa: Later. For now, drag-and-drop upload is fine.

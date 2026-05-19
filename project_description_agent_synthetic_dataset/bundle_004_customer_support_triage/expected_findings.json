@@ -1,0 +1,49 @@
+{
+  "bundle_id": "bundle_004_customer_support_triage",
+  "domain": "customer_support",
+  "must_detect_contradictions": [
+    {
+      "topic": "Real-time Zendesk ingestion",
+      "source_a": "prd_draft.md requires real-time Zendesk ingestion and 5-second classification",
+      "source_b": "transcript.txt says daily/hourly batch and CSV export are enough for MVP"
+    },
+    {
+      "topic": "Automatically sending responses",
+      "source_a": "prd_draft.md says automatically send responses for low-risk tickets",
+      "source_b": "transcript.txt and constraints.md require human approval before sending"
+    },
+    {
+      "topic": "German language support",
+      "source_a": "prd_draft.md lists English, Polish, and German",
+      "source_b": "transcript.txt and constraints.md say German is later/post-MVP"
+    },
+    {
+      "topic": "Analytics dashboard",
+      "source_a": "prd_draft.md includes analytics dashboard",
+      "source_b": "transcript.txt says CSV/simple summary table is enough for MVP"
+    }
+  ],
+  "must_ask_questions": [
+    "Should MVP process tickets in real time through Zendesk, or use batch CSV exports?",
+    "Are generated replies drafts only, with mandatory human approval?",
+    "Which languages are required in MVP?",
+    "What exact business rules define urgency?",
+    "Is an analytics dashboard required for MVP or is a simple export/summary enough?"
+  ],
+  "must_include_requirements": [
+    "The system classifies support tickets by category.",
+    "The system identifies urgency using defined business rules.",
+    "The system suggests response drafts.",
+    "Human approval is required before sending customer-facing messages.",
+    "English and Polish should be supported in MVP unless clarified otherwise."
+  ],
+  "must_not_include": [
+    "The system sends customer replies without human approval.",
+    "Real-time Zendesk integration is definitely required without clarification.",
+    "German support is definitely required in MVP without clarification."
+  ],
+  "preferred_clarification_count": {
+    "min": 4,
+    "max": 7
+  }
+}

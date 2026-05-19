@@ -1,0 +1,8 @@
+{
+  "zendesk_realtime_mvp": "Batch CSV export is enough for MVP. Real-time Zendesk integration is post-MVP.",
+  "auto_send_replies": "Yes. All replies are drafts. No message is sent to a customer without a human approving it first.",
+  "language_support_mvp": "English and Polish only. German is post-MVP.",
+  "urgency_rules": "Urgency is high if the ticket mentions service outage, data loss, or the word 'urgent'. Otherwise normal.",
+  "analytics_dashboard_mvp": "Simple CSV export and a summary table are enough for MVP.",
+  "default": "Use the conservative option and expand after the pilot."
+}

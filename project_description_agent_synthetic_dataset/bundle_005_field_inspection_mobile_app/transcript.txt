@@ -1,0 +1,27 @@
+Discovery call transcript
+
+Paweł, Field Ops: Technicians are often in basements or industrial areas with bad connectivity. Offline support matters a lot.
+
+Marta, Product: So the app needs to work without internet?
+
+Paweł: At least they should be able to fill the form and attach photos offline, then sync later.
+
+Igor, Engineering: The PRD says desktop browser is enough. Are technicians using laptops?
+
+Paweł: No, phones. Mostly Android phones, some iPhones.
+
+Marta: Is PDF export required in MVP?
+
+Paweł: Operations needs a clean report, but it can be HTML or PDF. PDF would be ideal.
+
+Igor: Email/password login?
+
+Paweł: Technicians already use Microsoft accounts. It would be better to use Microsoft login eventually.
+
+Marta: Admin template management sounds like a bigger feature.
+
+Paweł: We can hardcode the first checklist if that speeds up the pilot.
+
+Igor: Any photo requirements?
+
+Paweł: Photos should be compressed because some sites have poor upload speeds.

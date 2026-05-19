@@ -1,0 +1,7 @@
+{
+  "candidate_ranking": "No ranking. Show structured evidence per requirement only.",
+  "shortlist_export": "User-selected only. The recruiter picks candidates manually; the system does not auto-shortlist.",
+  "retention_policy": "Delete all data 30 days after the job opening is closed. No long-term storage in MVP.",
+  "single_job_mvp": "Yes, one job opening at a time for the pilot.",
+  "default": "Default to the most conservative option that keeps humans in control."
+}

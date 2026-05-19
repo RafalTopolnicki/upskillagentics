@@ -1,0 +1,8 @@
+{
+  "offline_capture": "Yes. Technicians work in locations with no signal. Offline capture with sync on reconnect is required.",
+  "mobile_vs_desktop": "Mobile first. Technicians use phones in the field. Desktop is secondary.",
+  "auth_method": "Email and password for the pilot. Microsoft login is the target but not required for MVP.",
+  "checklist_template_mvp": "Hardcoded checklist is fine for the pilot. Template management can come later.",
+  "pdf_export": "HTML report view is acceptable for MVP. PDF export is a nice-to-have.",
+  "default": "Use the simpler option that unblocks the pilot team fastest."
+}
