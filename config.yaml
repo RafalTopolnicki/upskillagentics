@@ -1,0 +1,25 @@
+# Model used across the entire pipeline — swap to claude-sonnet-4-6 for higher quality
+model: claude-haiku-4-5-20251001
+
+# Set to true to use fitz text extraction instead of native Claude PDF vision (cheaper for development)
+dev_mode: false
+
+# Number of PDF pages per extraction chunk — reduce if hitting output token limits
+pdf_pages_per_chunk: 15
+
+# Max follow-up Q&A rounds with the human in the clarifying loop
+max_clarify_rounds: 3
+
+# Set to true to ask questions interactively via stdin; false uses mock_answers.json
+interactive: false
+
+# Max challenger→writer revision attempts before annotating remaining issues as unverified
+max_revision_rounds: 3
+
+# Output token limits per agent
+max_tokens:
+  analysis: 1024
+  clarify: 512
+  extractor: 8192
+  writer: 4096
+  challenger: 2048

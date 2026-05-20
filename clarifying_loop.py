@@ -3,13 +3,11 @@ import os
 import anthropic
 from dotenv import load_dotenv
 from analysis_pass import load_bundle, run_analysis, build_docs_blocks, log_cache_usage
+from config import MAX_CLARIFY_ROUNDS, INTERACTIVE, MODEL, MAX_TOKENS_CLARIFY
 
 load_dotenv()
 
 client = anthropic.Anthropic()
-
-MAX_ROUNDS = 3
-INTERACTIVE = os.getenv("INTERACTIVE", "false").lower() == "true"
 
 
 def load_mock_answers(folder: str) -> dict:
@@ -60,7 +58,7 @@ def run_clarifying_loop(folder: str) -> dict:
     qa_pairs = []
     mock_answers = load_mock_answers(folder)
 
-    print(f"\n[CLARIFY] Starting clarifying loop — {len(questions)} initial question(s), max {MAX_ROUNDS} follow-up round(s)")
+    print(f"\n[CLARIFY] Starting clarifying loop — {len(questions)} initial question(s), max {MAX_CLARIFY_ROUNDS} follow-up round(s)")
     print("\n=== Clarifying Questions ===\n")
 
     # Round 1: ask initial questions from analysis pass
@@ -73,11 +71,11 @@ def run_clarifying_loop(folder: str) -> dict:
         print()
 
     # Agent-driven follow-up rounds
-    for round_num in range(MAX_ROUNDS):
+    for round_num in range(MAX_CLARIFY_ROUNDS):
         content = build_sufficiency_prompt(docs, qa_pairs)
         response = client.beta.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=512,
+            model=MODEL,
+            max_tokens=MAX_TOKENS_CLARIFY,
             betas=["prompt-caching-2024-07-31"],
             messages=[{"role": "user", "content": content}],
         )

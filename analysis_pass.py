@@ -5,12 +5,13 @@ import anthropic
 import fitz
 
 from dotenv import load_dotenv
+from config import DEV_MODE, PDF_PAGES_PER_CHUNK, MODEL, MAX_TOKENS_ANALYSIS
+
 load_dotenv()
 
 client = anthropic.Anthropic()
 
 SKIP_FILES = {"expected_findings.json", "dataset_manifest.json"}
-PDF_PAGES_PER_CHUNK = 3
 
 
 def _split_pdf(path: str) -> list[dict]:
@@ -21,15 +22,22 @@ def _split_pdf(path: str) -> list[dict]:
         end = min(start + PDF_PAGES_PER_CHUNK, total)
         chunk = fitz.open()
         chunk.insert_pdf(doc, from_page=start, to_page=end - 1)
-        data = base64.standard_b64encode(chunk.tobytes()).decode("utf-8")
+        if DEV_MODE:
+            text = "\n".join(page.get_text() for page in chunk)
+            label = os.path.basename(path) if total <= PDF_PAGES_PER_CHUNK else f"{os.path.basename(path)} (pages {start+1}-{end})"
+            chunks.append({"filename": label, "type": "text", "content": text})
+        else:
+            data = base64.standard_b64encode(chunk.tobytes()).decode("utf-8")
+            label = os.path.basename(path) if total <= PDF_PAGES_PER_CHUNK else f"{os.path.basename(path)} (pages {start+1}-{end})"
+            chunks.append({"filename": label, "type": "pdf", "data": data})
         chunk.close()
-        label = os.path.basename(path) if total <= PDF_PAGES_PER_CHUNK else f"{os.path.basename(path)} (pages {start+1}-{end})"
-        chunks.append({"filename": label, "type": "pdf", "data": data})
     doc.close()
     return chunks
 
 
 def load_bundle(folder: str) -> list[dict]:
+    if DEV_MODE:
+        print("[BUNDLE] DEV_MODE=true — PDFs processed via text extraction (cheaper, no vision)")
     docs = []
     for fname in sorted(os.listdir(folder)):
         if fname in SKIP_FILES:
@@ -108,8 +116,8 @@ def run_analysis(folder: str) -> dict:
 
     print("[ANALYSIS] Calling Claude to identify gaps and contradictions...")
     response = client.beta.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=1024,
+        model=MODEL,
+        max_tokens=MAX_TOKENS_ANALYSIS,
         betas=["prompt-caching-2024-07-31"],
         messages=[{"role": "user", "content": content}],
     )

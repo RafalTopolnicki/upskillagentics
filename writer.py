@@ -1,5 +1,6 @@
 import anthropic
 from dotenv import load_dotenv
+from config import MODEL, MAX_TOKENS_WRITER
 
 load_dotenv()
 
@@ -125,8 +126,8 @@ def write_artifacts(
     prompt = build_writing_prompt(facts, qa_pairs, issues, previous_artifacts)
 
     response = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=4096,
+        model=MODEL,
+        max_tokens=MAX_TOKENS_WRITER,
         tools=[WRITING_TOOL],
         tool_choice={"type": "tool", "name": "submit_artifacts"},
         messages=[{"role": "user", "content": prompt}],

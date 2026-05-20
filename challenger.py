@@ -1,5 +1,6 @@
 import anthropic
 from dotenv import load_dotenv
+from config import MAX_REVISION_ROUNDS, MODEL, MAX_TOKENS_CHALLENGER
 
 load_dotenv()
 
@@ -69,8 +70,8 @@ def run_challenger(facts: list[dict], artifacts: dict) -> dict:
     prompt = build_challenger_prompt(facts, artifacts)
 
     response = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=2048,
+        model=MODEL,
+        max_tokens=MAX_TOKENS_CHALLENGER,
         tools=[CHALLENGER_TOOL],
         tool_choice={"type": "tool", "name": "submit_verdict"},
         messages=[{"role": "user", "content": prompt}],
@@ -78,9 +79,6 @@ def run_challenger(facts: list[dict], artifacts: dict) -> dict:
 
     tool_use = next(b for b in response.content if b.type == "tool_use")
     return tool_use.input
-
-
-MAX_REVISION_ROUNDS = 3
 
 
 def annotate_artifacts(artifacts: dict, issues: list[dict]) -> dict:

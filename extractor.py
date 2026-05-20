@@ -1,10 +1,30 @@
+import json
+import os
 import anthropic
 from dotenv import load_dotenv
 from analysis_pass import load_bundle, build_docs_blocks, log_cache_usage
+from config import MODEL, MAX_TOKENS_EXTRACTOR
 
 load_dotenv()
 
 client = anthropic.Anthropic()
+
+FACTS_CACHE_FILE = "facts_cache.json"
+
+
+def _load_cache(folder: str) -> list[dict] | None:
+    path = os.path.join(folder, FACTS_CACHE_FILE)
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return None
+
+
+def _save_cache(folder: str, facts: list[dict]) -> None:
+    path = os.path.join(folder, FACTS_CACHE_FILE)
+    with open(path, "w") as f:
+        json.dump(facts, f, indent=2, ensure_ascii=False)
+    print(f"[EXTRACTOR] Facts cached to {path}")
 
 EXTRACTION_TOOL = {
     "name": "submit_facts",
@@ -62,8 +82,8 @@ def _extract_from_doc(doc: dict, index: int, total: int) -> list[dict]:
     content = build_extraction_prompt([doc])
 
     response = client.beta.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=8192,
+        model=MODEL,
+        max_tokens=MAX_TOKENS_EXTRACTOR,
         betas=["prompt-caching-2024-07-31"],
         tools=[EXTRACTION_TOOL],
         tool_choice={"type": "tool", "name": "submit_facts"},
@@ -85,6 +105,12 @@ def _extract_from_doc(doc: dict, index: int, total: int) -> list[dict]:
 
 
 def run_extraction(folder: str) -> dict:
+    cached = _load_cache(folder)
+    if cached is not None:
+        print(f"[EXTRACTOR] Loaded {len(cached)} fact(s) from cache (skipping API calls)")
+        docs = load_bundle(folder)
+        return {"docs": docs, "facts": cached}
+
     docs = load_bundle(folder)
     print(f"[EXTRACTOR] Extracting facts from {len(docs)} document(s)...")
 
@@ -93,6 +119,7 @@ def run_extraction(folder: str) -> dict:
         all_facts.extend(_extract_from_doc(doc, i, len(docs)))
 
     print(f"[EXTRACTOR] Total: {len(all_facts)} fact(s) extracted")
+    _save_cache(folder, all_facts)
     return {"docs": docs, "facts": all_facts}
 
 
