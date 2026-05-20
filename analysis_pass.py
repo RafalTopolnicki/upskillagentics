@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import anthropic
+import fitz
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -9,6 +10,23 @@ load_dotenv()
 client = anthropic.Anthropic()
 
 SKIP_FILES = {"expected_findings.json", "dataset_manifest.json"}
+PDF_PAGES_PER_CHUNK = 3
+
+
+def _split_pdf(path: str) -> list[dict]:
+    doc = fitz.open(path)
+    total = len(doc)
+    chunks = []
+    for start in range(0, total, PDF_PAGES_PER_CHUNK):
+        end = min(start + PDF_PAGES_PER_CHUNK, total)
+        chunk = fitz.open()
+        chunk.insert_pdf(doc, from_page=start, to_page=end - 1)
+        data = base64.standard_b64encode(chunk.tobytes()).decode("utf-8")
+        chunk.close()
+        label = os.path.basename(path) if total <= PDF_PAGES_PER_CHUNK else f"{os.path.basename(path)} (pages {start+1}-{end})"
+        chunks.append({"filename": label, "type": "pdf", "data": data})
+    doc.close()
+    return chunks
 
 
 def load_bundle(folder: str) -> list[dict]:
@@ -18,9 +36,7 @@ def load_bundle(folder: str) -> list[dict]:
             continue
         path = os.path.join(folder, fname)
         if fname.endswith(".pdf"):
-            with open(path, "rb") as f:
-                data = base64.standard_b64encode(f.read()).decode("utf-8")
-            docs.append({"filename": fname, "type": "pdf", "data": data})
+            docs.extend(_split_pdf(path))
         elif fname.endswith((".md", ".txt")):
             with open(path) as f:
                 docs.append({"filename": fname, "type": "text", "content": f.read()})
@@ -68,6 +84,8 @@ def build_analysis_prompt(docs: list[dict]) -> list[dict]:
         {
             "type": "text",
             "text": """You are analyzing a set of project input documents shown above.
+
+Language rule: detect the language of the source documents. If all documents are in the same language, respond in that language. If documents are in multiple languages, respond in English.
 
 Identify the following and return ONLY valid JSON, no prose:
 {

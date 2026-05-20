@@ -26,3 +26,9 @@ The same document content was being sent to Claude three separate times (analysi
 
 ## Native PDF support via Claude vision
 Text extraction from PDFs using `pymupdf` silently lost tables, diagrams, and images, and failed completely on scanned documents. PDFs are now base64-encoded and passed directly to Claude as document blocks, letting Claude read them visually — understanding layout, tables, and scanned pages without any text extraction step.
+
+## PDF chunking for large documents
+Large PDFs caused the extractor to hit the output token limit mid-response, producing a truncated and unusable fact list. PDFs are now split into chunks of 20 pages using `pymupdf` before being passed to Claude, with each chunk extracted separately and facts merged at the end.
+
+## Multilingual support
+The pipeline always produced output in English regardless of the source document language. A language detection rule was added to all five prompts — if all documents share a language, the entire pipeline output (questions, facts, artifacts, challenger verdicts) is produced in that language; if documents are mixed-language, English is used as the fallback.

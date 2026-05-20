@@ -56,6 +56,8 @@ Your job: find every claim in the artifacts that is NOT supported by the fact li
 ## Implementation PRD
 {artifacts['implementation_prd']}
 
+Language rule: detect the language of the facts and artifacts. Respond (claims, notes) in that language. If mixed, use English.
+
 Rules:
 - A claim is supported if it can be directly traced to one or more facts above.
 - A claim is NOT supported if it introduces information, numbers, decisions, or requirements not present in the fact list.

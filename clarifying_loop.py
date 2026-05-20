@@ -36,6 +36,8 @@ def build_sufficiency_prompt(docs: list[dict], qa_pairs: list[dict]) -> list[dic
             "type": "text",
             "text": f"""You are assessing whether you have enough information to write a clear Project Brief and Implementation PRD.
 
+Language rule: detect the language of the source documents. If all documents are in the same language, ask follow-up questions in that language. If documents are in multiple languages, use English.
+
 ## Clarifications collected so far
 {qa_text}
 

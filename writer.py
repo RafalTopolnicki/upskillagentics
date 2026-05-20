@@ -77,6 +77,8 @@ Do NOT invent new information to justify a claim.
 ## Clarifications from the project lead
 {qa_text}
 
+Language rule: detect the language of the source documents. If all documents are in the same language, write both artifacts in that language. If documents are in multiple languages, write in English.
+
 Produce both artifacts now.
 
 Rules that apply to BOTH artifacts:

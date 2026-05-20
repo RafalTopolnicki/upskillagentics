@@ -45,6 +45,9 @@ def build_extraction_prompt(docs: list[dict]) -> list[dict]:
         {
             "type": "text",
             "text": """Extract every distinct requirement, constraint, or decision that is explicitly stated in the source documents shown above.
+
+Language rule: detect the language of the source documents. If all documents are in the same language, write facts and quotes in that language. If documents are in multiple languages, use English.
+
 Rules:
 - Each fact must be atomic (one requirement per fact).
 - Every fact must be grounded in a direct quote from a source document.
@@ -54,10 +57,9 @@ Rules:
     ]
 
 
-def run_extraction(folder: str) -> dict:
-    docs = load_bundle(folder)
-    print(f"[EXTRACTOR] Extracting facts from {len(docs)} document(s)...")
-    content = build_extraction_prompt(docs)
+def _extract_from_doc(doc: dict, index: int, total: int) -> list[dict]:
+    tag = f"EXTRACTOR-{index+1}/{total}"
+    content = build_extraction_prompt([doc])
 
     response = client.beta.messages.create(
         model="claude-haiku-4-5-20251001",
@@ -68,19 +70,30 @@ def run_extraction(folder: str) -> dict:
         messages=[{"role": "user", "content": content}],
     )
 
-    log_cache_usage("EXTRACTOR", response.usage)
+    log_cache_usage(tag, response.usage)
 
     if response.stop_reason == "max_tokens":
         raise RuntimeError(
-            "[EXTRACTOR] Response truncated — document too large to extract all facts in one call. "
-            "Consider splitting the document or reducing its size."
+            f"[{tag}] Response truncated — '{doc['filename']}' produced too many facts to fit in one call. "
+            "Reduce PDF_PAGES_PER_CHUNK in analysis_pass.py."
         )
 
     tool_use = next(b for b in response.content if b.type == "tool_use")
     facts = tool_use.input["facts"]
-    print(f"[EXTRACTOR] Extracted {len(facts)} fact(s)")
+    print(f"[{tag}] Extracted {len(facts)} fact(s) from '{doc['filename']}'")
+    return facts
 
-    return {"docs": docs, "facts": facts}
+
+def run_extraction(folder: str) -> dict:
+    docs = load_bundle(folder)
+    print(f"[EXTRACTOR] Extracting facts from {len(docs)} document(s)...")
+
+    all_facts = []
+    for i, doc in enumerate(docs):
+        all_facts.extend(_extract_from_doc(doc, i, len(docs)))
+
+    print(f"[EXTRACTOR] Total: {len(all_facts)} fact(s) extracted")
+    return {"docs": docs, "facts": all_facts}
 
 
 if __name__ == "__main__":
