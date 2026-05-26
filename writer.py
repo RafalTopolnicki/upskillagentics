@@ -1,6 +1,7 @@
 import anthropic
 from dotenv import load_dotenv
 from config import MODEL, MAX_TOKENS_WRITER
+import token_tracker
 
 load_dotenv()
 
@@ -133,6 +134,13 @@ def write_artifacts(
         messages=[{"role": "user", "content": prompt}],
     )
 
+    if response.stop_reason == "max_tokens":
+        raise RuntimeError(
+            f"[WRITER] Response truncated — artifacts too large for max_tokens={MAX_TOKENS_WRITER}. "
+            "Increase max_tokens.writer in config.yaml."
+        )
+
+    token_tracker.record_pipeline(response.usage)
     tool_use = next(b for b in response.content if b.type == "tool_use")
     print("[WRITER] Artifacts produced (Project Brief + Implementation PRD)")
     return tool_use.input

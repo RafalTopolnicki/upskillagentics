@@ -4,6 +4,7 @@ import anthropic
 from dotenv import load_dotenv
 from analysis_pass import load_bundle, run_analysis, build_docs_blocks, log_cache_usage
 from config import MAX_CLARIFY_ROUNDS, INTERACTIVE, MODEL, MAX_TOKENS_CLARIFY
+import token_tracker
 
 load_dotenv()
 
@@ -34,7 +35,10 @@ def build_sufficiency_prompt(docs: list[dict], qa_pairs: list[dict]) -> list[dic
             "type": "text",
             "text": f"""You are assessing whether you have enough information to write a clear Project Brief and Implementation PRD.
 
-Language rule: detect the language of the source documents. If all documents are in the same language, ask follow-up questions in that language. If documents are in multiple languages, use English.
+LANGUAGE RULE: Detect the primary language of the source documents.
+- If all documents are in the same language, write ALL follow-up question text in that language.
+- If documents are in multiple languages, use English.
+- The JSON keys (sufficient, follow_up_questions) are always in English. Only the question VALUES must be in the detected language.
 
 ## Clarifications collected so far
 {qa_text}
@@ -81,6 +85,7 @@ def run_clarifying_loop(folder: str) -> dict:
         )
 
         log_cache_usage(f"CLARIFY-round{round_num + 1}", response.usage)
+        token_tracker.record_pipeline(response.usage)
         raw = response.content[0].text.strip()
         if raw.startswith("```"):
             raw = raw.split("```", 2)[1]

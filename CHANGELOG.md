@@ -30,5 +30,11 @@ Text extraction from PDFs using `pymupdf` silently lost tables, diagrams, and im
 ## PDF chunking for large documents
 Large PDFs caused the extractor to hit the output token limit mid-response, producing a truncated and unusable fact list. PDFs are now split into chunks of 20 pages using `pymupdf` before being passed to Claude, with each chunk extracted separately and facts merged at the end.
 
+## Automated evaluation harness
+There was no way to measure pipeline quality or compare models objectively. An eval harness was added: `eval.py` runs the full pipeline (with mock answers, no human in the loop) on any combination of bundles and models, then calls a fixed Sonnet judge to score four dimensions against `expected_findings.json` — contradiction recall, question recall, required fact recall, and forbidden claim rate. Results are printed as a comparison table and saved to `eval_results.json` with per-item judge reasoning for auditability.
+
+## Token usage and cost tracking
+There was no visibility into how much each pipeline run cost. A `token_tracker.py` module was added to accumulate input, output, cache-write, and cache-read tokens across all pipeline and judge API calls. The eval table now shows per-run pipeline cost, judge cost, and total cost in USD, with per-model totals at the bottom.
+
 ## Multilingual support
 The pipeline always produced output in English regardless of the source document language. A language detection rule was added to all five prompts — if all documents share a language, the entire pipeline output (questions, facts, artifacts, challenger verdicts) is produced in that language; if documents are mixed-language, English is used as the fallback.

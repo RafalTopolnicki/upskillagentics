@@ -6,6 +6,7 @@ import fitz
 
 from dotenv import load_dotenv
 from config import DEV_MODE, PDF_PAGES_PER_CHUNK, MODEL, MAX_TOKENS_ANALYSIS
+import token_tracker
 
 load_dotenv()
 
@@ -93,14 +94,17 @@ def build_analysis_prompt(docs: list[dict]) -> list[dict]:
             "type": "text",
             "text": """You are analyzing a set of project input documents shown above.
 
-Language rule: detect the language of the source documents. If all documents are in the same language, respond in that language. If documents are in multiple languages, respond in English.
+LANGUAGE RULE: Detect the primary language of the source documents.
+- If all documents are in the same language, write ALL text values in that language — gaps, contradictions, and question text.
+- If documents are in multiple languages, use English.
+- The JSON keys (gaps, contradictions, clarifying_questions, topic, question) are always in English. Only the VALUES must be in the detected language.
 
 Identify the following and return ONLY valid JSON, no prose:
 {
   "gaps": ["list of missing information or undefined requirements"],
   "contradictions": ["list of conflicts between documents"],
   "clarifying_questions": [
-    {"topic": "short_snake_case_tag", "question": "Full question text?"}
+    {"topic": "short_snake_case_tag", "question": "Full question text in the detected language?"}
   ]
 }
 
@@ -123,6 +127,14 @@ def run_analysis(folder: str) -> dict:
     )
 
     log_cache_usage("ANALYSIS", response.usage)
+    token_tracker.record_pipeline(response.usage)
+
+    if response.stop_reason == "max_tokens":
+        raise RuntimeError(
+            f"[ANALYSIS] Response truncated — document too large for max_tokens={MAX_TOKENS_ANALYSIS}. "
+            "Increase max_tokens.analysis in config.yaml."
+        )
+
     raw = response.content[0].text.strip()
     if raw.startswith("```"):
         raw = raw.split("```", 2)[1]

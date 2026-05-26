@@ -4,6 +4,7 @@ import anthropic
 from dotenv import load_dotenv
 from analysis_pass import load_bundle, build_docs_blocks, log_cache_usage
 from config import MODEL, MAX_TOKENS_EXTRACTOR
+import token_tracker
 
 load_dotenv()
 
@@ -91,6 +92,7 @@ def _extract_from_doc(doc: dict, index: int, total: int) -> list[dict]:
     )
 
     log_cache_usage(tag, response.usage)
+    token_tracker.record_pipeline(response.usage)
 
     if response.stop_reason == "max_tokens":
         raise RuntimeError(
@@ -104,15 +106,16 @@ def _extract_from_doc(doc: dict, index: int, total: int) -> list[dict]:
     return facts
 
 
-def run_extraction(folder: str) -> dict:
-    cached = _load_cache(folder)
-    if cached is not None:
-        print(f"[EXTRACTOR] Loaded {len(cached)} fact(s) from cache (skipping API calls)")
-        docs = load_bundle(folder)
-        return {"docs": docs, "facts": cached}
+def run_extraction(folder: str, use_cache: bool = True) -> dict:
+    if use_cache:
+        cached = _load_cache(folder)
+        if cached is not None:
+            print(f"[EXTRACTOR] Loaded {len(cached)} fact(s) from cache (skipping API calls)")
+            docs = load_bundle(folder)
+            return {"docs": docs, "facts": cached}
 
     docs = load_bundle(folder)
-    print(f"[EXTRACTOR] Extracting facts from {len(docs)} document(s)...")
+    print(f"[EXTRACTOR] Extracting facts from {len(docs)} document(s): {[d['filename'] for d in docs]}")
 
     all_facts = []
     for i, doc in enumerate(docs):

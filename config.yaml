@@ -5,7 +5,7 @@ model: claude-haiku-4-5-20251001
 dev_mode: false
 
 # Number of PDF pages per extraction chunk — reduce if hitting output token limits
-pdf_pages_per_chunk: 15
+pdf_pages_per_chunk: 5
 
 # Max follow-up Q&A rounds with the human in the clarifying loop
 max_clarify_rounds: 3
@@ -18,8 +18,8 @@ max_revision_rounds: 3
 
 # Output token limits per agent
 max_tokens:
-  analysis: 1024
-  clarify: 512
+  analysis: 4096
+  clarify: 1024
   extractor: 8192
-  writer: 4096
+  writer: 8192
   challenger: 2048

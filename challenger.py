@@ -1,6 +1,7 @@
 import anthropic
 from dotenv import load_dotenv
 from config import MAX_REVISION_ROUNDS, MODEL, MAX_TOKENS_CHALLENGER
+import token_tracker
 
 load_dotenv()
 
@@ -77,6 +78,7 @@ def run_challenger(facts: list[dict], artifacts: dict) -> dict:
         messages=[{"role": "user", "content": prompt}],
     )
 
+    token_tracker.record_pipeline(response.usage)
     tool_use = next(b for b in response.content if b.type == "tool_use")
     return tool_use.input
 
@@ -102,7 +104,7 @@ def check_and_revise(facts: list[dict], artifacts: dict, qa_pairs: list[dict]) -
             print("[CHALLENGER] All claims supported — output approved.")
             return artifacts
 
-        issues = result["issues"]
+        issues = result.get("issues", [])
         print(f"[CHALLENGER] {len(issues)} unsupported claim(s) found:")
         for issue in issues:
             print(f"  CLAIM: {issue['claim']}")
