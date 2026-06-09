@@ -7,6 +7,9 @@ dev_mode: false
 # Number of PDF pages per extraction chunk — reduce if hitting output token limits
 pdf_pages_per_chunk: 5
 
+# Pages of overlap carried over from the previous chunk to preserve cross-boundary context
+pdf_overlap_pages: 1
+
 # Max follow-up Q&A rounds with the human in the clarifying loop
 max_clarify_rounds: 3
 

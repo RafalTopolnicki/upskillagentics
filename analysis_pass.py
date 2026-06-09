@@ -5,7 +5,7 @@ import anthropic
 import fitz
 
 from dotenv import load_dotenv
-from config import DEV_MODE, PDF_PAGES_PER_CHUNK, MODEL, MAX_TOKENS_ANALYSIS
+from config import DEV_MODE, PDF_PAGES_PER_CHUNK, PDF_OVERLAP_PAGES, MODEL, MAX_TOKENS_ANALYSIS
 import token_tracker
 
 load_dotenv()
@@ -18,18 +18,26 @@ SKIP_FILES = {"expected_findings.json", "dataset_manifest.json"}
 def _split_pdf(path: str) -> list[dict]:
     doc = fitz.open(path)
     total = len(doc)
+    basename = os.path.basename(path)
     chunks = []
     for start in range(0, total, PDF_PAGES_PER_CHUNK):
         end = min(start + PDF_PAGES_PER_CHUNK, total)
+        # overlap_start pulls in trailing pages from the previous chunk so facts
+        # that straddle a chunk boundary are visible to both adjacent extractors
+        overlap_start = max(0, start - PDF_OVERLAP_PAGES)
         chunk = fitz.open()
-        chunk.insert_pdf(doc, from_page=start, to_page=end - 1)
+        chunk.insert_pdf(doc, from_page=overlap_start, to_page=end - 1)
+        if total <= PDF_PAGES_PER_CHUNK:
+            label = basename
+        elif overlap_start < start:
+            label = f"{basename} (pages {start+1}-{end}, context: {overlap_start+1}-{start})"
+        else:
+            label = f"{basename} (pages {start+1}-{end})"
         if DEV_MODE:
             text = "\n".join(page.get_text() for page in chunk)
-            label = os.path.basename(path) if total <= PDF_PAGES_PER_CHUNK else f"{os.path.basename(path)} (pages {start+1}-{end})"
             chunks.append({"filename": label, "type": "text", "content": text})
         else:
             data = base64.standard_b64encode(chunk.tobytes()).decode("utf-8")
-            label = os.path.basename(path) if total <= PDF_PAGES_PER_CHUNK else f"{os.path.basename(path)} (pages {start+1}-{end})"
             chunks.append({"filename": label, "type": "pdf", "data": data})
         chunk.close()
     doc.close()
