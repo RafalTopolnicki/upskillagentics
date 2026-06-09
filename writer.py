@@ -79,7 +79,7 @@ Do NOT invent new information to justify a claim.
 ## Clarifications from the project lead
 {qa_text}
 
-Language rule: detect the language of the source documents. If all documents are in the same language, write both artifacts in that language. If documents are in multiple languages, write in English.
+Language rule: detect the language of the verified facts above (which reflect the source documents). Ignore the language of the clarification answers — they may be in a different language. If all facts are in the same language, write both artifacts in that language. If facts are in multiple languages, write in English.
 
 Produce both artifacts now.
 
@@ -179,7 +179,7 @@ Do NOT invent new information to justify a claim.
 ## Clarifications from the project lead
 {qa_text}
 
-Language rule: detect the language of the source documents. If all documents are in the same language, write both artifacts in that language. If documents are in multiple languages, write in English.
+Language rule: detect the language of the verified facts above (which reflect the source documents). Ignore the language of the clarification answers — they may be in a different language. If all facts are in the same language, write both artifacts in that language. If facts are in multiple languages, write in English.
 
 Produce both artifacts now.
 
@@ -265,10 +265,11 @@ if __name__ == "__main__":
     print("\n=== IMPLEMENTATION PRD ===\n")
     print(artifacts["implementation_prd"])
 
-    with open("output_project_brief.md", "w") as f:
+    import os
+    from config import make_output_dir
+    out = make_output_dir(folder)
+    with open(os.path.join(out, "project_brief.md"), "w") as f:
         f.write(artifacts["project_brief"])
-
-    with open("output_implementation_prd.md", "w") as f:
+    with open(os.path.join(out, "implementation_prd.md"), "w") as f:
         f.write(artifacts["implementation_prd"])
-
-    print("\n[Saved to output_project_brief.md and output_implementation_prd.md]")
+    print(f"\n[Saved to {out}/]")

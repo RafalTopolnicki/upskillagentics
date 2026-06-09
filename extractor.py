@@ -102,6 +102,12 @@ def _extract_from_doc(doc: dict, index: int, total: int) -> list[dict]:
 
     tool_use = next(b for b in response.content if b.type == "tool_use")
     facts = tool_use.input["facts"]
+    if not isinstance(facts, list) or (facts and not isinstance(facts[0], dict)):
+        raise RuntimeError(
+            f"[{tag}] Malformed extractor response — 'facts' is not a list of dicts "
+            f"(got {type(facts).__name__} with {len(facts)} item(s)). "
+            "Increase max_tokens.extractor or reduce PDF_PAGES_PER_CHUNK in config.yaml."
+        )
     print(f"[{tag}] Extracted {len(facts)} fact(s) from '{doc['filename']}'")
     return facts
 

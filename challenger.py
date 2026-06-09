@@ -1,3 +1,4 @@
+import os
 import anthropic
 from dotenv import load_dotenv
 from config import MAX_REVISION_ROUNDS, MODEL, MAX_TOKENS_CHALLENGER
@@ -191,9 +192,9 @@ if __name__ == "__main__":
     from clarifying_loop import run_clarifying_loop
     from writer import write_artifacts
 
-    folder = "project_description_agent_synthetic_dataset/bundle_001_internal_kb_chatbot"
+    #folder = "project_description_agent_synthetic_dataset/bundle_001_internal_kb_chatbot"
     #folder = "project_description_agent_synthetic_dataset/bundle_002_invoice_processing_app"
-    #folder = "project_description_agent_synthetic_dataset/bundle_006_orange"
+    folder = "project_description_agent_synthetic_dataset/bundle_006_orange"
     #folder = "project_description_agent_synthetic_dataset/bundle_007_zabka"
 
 
@@ -203,8 +204,10 @@ if __name__ == "__main__":
 
     final_artifacts = check_and_revise(extraction["facts"], initial_artifacts, context["qa_pairs"])
 
-    with open("output_project_brief.md", "w") as f:
+    from config import make_output_dir
+    out = make_output_dir(folder)
+    with open(os.path.join(out, "project_brief.md"), "w") as f:
         f.write(final_artifacts["project_brief"])
-    with open("output_implementation_prd.md", "w") as f:
+    with open(os.path.join(out, "implementation_prd.md"), "w") as f:
         f.write(final_artifacts["implementation_prd"])
-    print("\n[Saved to output_project_brief.md and output_implementation_prd.md]")
+    print(f"\n[Saved to {out}/]")
