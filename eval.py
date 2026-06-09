@@ -4,6 +4,8 @@ Evaluate the project description pipeline across bundles and models.
 Usage:
   python eval.py --bundles 001 002 003 004 005 --models haiku sonnet opus
   python eval.py --bundles 001 --models haiku sonnet   # quick comparison
+  python eval.py --bundles 001 002 003 --models haiku --pipeline full simple   # A/B: full vs simple
+  python eval.py --bundles 001 --models haiku --pipeline simple   # simple pipeline only
 """
 
 import argparse
@@ -62,13 +64,34 @@ def run_pipeline(folder: str, model_id: str) -> dict:
     }
 
 
-def print_table(results: dict, bundles: list[str], models: list[str]) -> None:
+def run_pipeline_simple(folder: str, model_id: str) -> dict:
+    """Simplified pipeline: skips extractor, writer and challenger work directly from raw docs."""
+    _patch_model(model_id)
+
+    from analysis_pass import load_bundle
+    from clarifying_loop import run_clarifying_loop
+    from writer import write_artifacts_from_docs
+    from challenger import check_and_revise_from_docs
+
+    docs = load_bundle(folder)
+    context = run_clarifying_loop(folder)
+    initial_artifacts = write_artifacts_from_docs(docs, context["qa_pairs"])
+    final_artifacts = check_and_revise_from_docs(docs, initial_artifacts, context["qa_pairs"])
+
+    return {
+        "analysis": context["analysis"],
+        "qa_pairs": context["qa_pairs"],
+        "artifacts": final_artifacts,
+    }
+
+
+def print_table(results: dict, bundles: list[str], models: list[str], pipelines: list[str]) -> None:
     dims = ["contradiction_recall", "question_recall", "required_fact_recall", "forbidden_claim_rate"]
     labels = ["Contradict", "Questions", "ReqFacts", "Forbidden"]
 
     col_w = 11
     header = (
-        f"{'Bundle':<7} {'Model':<8}"
+        f"{'Bundle':<7} {'Model':<8} {'Variant':<7}"
         + "".join(f"{l:>{col_w}}" for l in labels)
         + f"{'CountOK':>{col_w}}{'OVERALL':>{col_w}}"
         + f"{'Pipeline$':>{col_w}}{'Judge$':>{col_w}}{'Total$':>{col_w}}"
@@ -78,33 +101,37 @@ def print_table(results: dict, bundles: list[str], models: list[str]) -> None:
 
     for bundle_id in bundles:
         for model_name in models:
-            key = f"{bundle_id}_{model_name}"
-            if key not in results:
-                continue
-            r = results[key]
-            row = f"{bundle_id:<7} {model_name:<8}"
-            for dim in dims:
-                row += f"{r[dim]['mean']:>{col_w}.2f}"
-            ok = "✓" if r["clarification_count"]["ok"] else "✗"
-            row += f"{ok:>{col_w}}"
-            row += f"{r['overall']:>{col_w}.2f}"
-            usage = r.get("usage", {})
-            row += f"${usage.get('pipeline', {}).get('cost_usd', 0):>{col_w-1}.4f}"
-            row += f"${usage.get('judge', {}).get('cost_usd', 0):>{col_w-1}.4f}"
-            row += f"${usage.get('total_cost_usd', 0):>{col_w-1}.4f}"
-            print(row)
+            for pipeline in pipelines:
+                key = f"{bundle_id}_{model_name}_{pipeline}"
+                if key not in results:
+                    continue
+                r = results[key]
+                variant = "full" if pipeline == "full" else "simple"
+                row = f"{bundle_id:<7} {model_name:<8} {variant:<7}"
+                for dim in dims:
+                    row += f"{r[dim]['mean']:>{col_w}.2f}"
+                ok = "✓" if r["clarification_count"]["ok"] else "✗"
+                row += f"{ok:>{col_w}}"
+                row += f"{r['overall']:>{col_w}.2f}"
+                usage = r.get("usage", {})
+                row += f"${usage.get('pipeline', {}).get('cost_usd', 0):>{col_w-1}.4f}"
+                row += f"${usage.get('judge', {}).get('cost_usd', 0):>{col_w-1}.4f}"
+                row += f"${usage.get('total_cost_usd', 0):>{col_w-1}.4f}"
+                print(row)
 
     print(sep)
 
     if len(bundles) > 1:
         print()
         for model_name in models:
-            keys = [f"{b}_{model_name}" for b in bundles if f"{b}_{model_name}" in results]
-            if not keys:
-                continue
-            avg_score = sum(results[k]["overall"] for k in keys) / len(keys)
-            total_cost = sum(results[k].get("usage", {}).get("total_cost_usd", 0) for k in keys)
-            print(f"  {model_name:<8} avg overall: {avg_score:.2f}  total cost: ${total_cost:.4f}  (across {len(keys)} bundle(s))")
+            for pipeline in pipelines:
+                keys = [f"{b}_{model_name}_{pipeline}" for b in bundles if f"{b}_{model_name}_{pipeline}" in results]
+                if not keys:
+                    continue
+                avg_score = sum(results[k]["overall"] for k in keys) / len(keys)
+                total_cost = sum(results[k].get("usage", {}).get("total_cost_usd", 0) for k in keys)
+                variant = "full" if pipeline == "full" else "simple"
+                print(f"  {model_name:<8} [{variant}] avg overall: {avg_score:.2f}  total cost: ${total_cost:.4f}  (across {len(keys)} bundle(s))")
 
 
 def main():
@@ -118,6 +145,11 @@ def main():
         "--models", nargs="+", default=["haiku"],
         choices=list(MODELS.keys()), metavar="MODEL",
         help="Models to compare: haiku, sonnet, opus",
+    )
+    parser.add_argument(
+        "--pipeline", nargs="+", default=["full"],
+        choices=["full", "simple"], metavar="PIPELINE",
+        help="Pipeline variants to compare: full (extractor+writer+challenger), simple (raw-docs→writer+challenger)",
     )
     args = parser.parse_args()
 
@@ -133,26 +165,30 @@ def main():
                 print(f"[EVAL] Bundle {bundle_id} not found at {folder}, skipping.")
                 continue
 
-            print(f"\n{'='*60}")
-            print(f"[EVAL] Bundle {bundle_id} | Model: {model_name} ({model_id})")
-            print(f"{'='*60}")
+            for pipeline in args.pipeline:
+                print(f"\n{'='*60}")
+                print(f"[EVAL] Bundle {bundle_id} | Model: {model_name} ({model_id}) | Pipeline: {pipeline}")
+                print(f"{'='*60}")
 
-            try:
-                token_tracker.reset()
-                run = run_pipeline(folder, model_id)
-                expected = _load_expected(folder)
-                scores = score_run(run["analysis"], run["qa_pairs"], run["artifacts"], expected)
-                scores["usage"] = token_tracker.summary(model_id)
-                results[f"{bundle_id}_{model_name}"] = scores
-                u = scores["usage"]
-                print(f"[EVAL] Done — overall: {scores['overall']:.2f}  |  pipeline: ${u['pipeline']['cost_usd']:.4f}  judge: ${u['judge']['cost_usd']:.4f}  total: ${u['total_cost_usd']:.4f}")
-            except Exception as e:
-                import traceback
-                print(f"[EVAL] ERROR on bundle {bundle_id} / model {model_name}: {e}")
-                traceback.print_exc()
+                try:
+                    token_tracker.reset()
+                    if pipeline == "simple":
+                        run = run_pipeline_simple(folder, model_id)
+                    else:
+                        run = run_pipeline(folder, model_id)
+                    expected = _load_expected(folder)
+                    scores = score_run(run["analysis"], run["qa_pairs"], run["artifacts"], expected)
+                    scores["usage"] = token_tracker.summary(model_id)
+                    results[f"{bundle_id}_{model_name}_{pipeline}"] = scores
+                    u = scores["usage"]
+                    print(f"[EVAL] Done — overall: {scores['overall']:.2f}  |  pipeline: ${u['pipeline']['cost_usd']:.4f}  judge: ${u['judge']['cost_usd']:.4f}  total: ${u['total_cost_usd']:.4f}")
+                except Exception as e:
+                    import traceback
+                    print(f"[EVAL] ERROR on bundle {bundle_id} / model {model_name} / pipeline {pipeline}: {e}")
+                    traceback.print_exc()
 
     if results:
-        print_table(results, args.bundles, args.models)
+        print_table(results, args.bundles, args.models, args.pipeline)
 
         with open("eval_results.json", "w") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)

@@ -36,5 +36,35 @@ There was no way to measure pipeline quality or compare models objectively. An e
 ## Token usage and cost tracking
 There was no visibility into how much each pipeline run cost. A `token_tracker.py` module was added to accumulate input, output, cache-write, and cache-read tokens across all pipeline and judge API calls. The eval table now shows per-run pipeline cost, judge cost, and total cost in USD, with per-model totals at the bottom.
 
+## Pipeline variants and A/B evaluation
+
+The pipeline had a single fixed architecture (extractor → writer → challenger), making it impossible to test whether simpler designs could achieve comparable quality at lower cost. Two variants were introduced and made selectable via a `--pipeline` flag in `eval.py`:
+
+**Full variant** (`full`): the original pipeline. An extractor agent reads all source documents and compresses them into `{fact, source, quote}` triples. The writer is blind to raw documents and writes only from the fact list. The challenger checks every output claim against those same structured facts. The extractor acts as a firewall: the writer cannot hallucinate details that weren't explicitly extracted.
+
+**Simple variant** (`simple`): skips the extractor entirely. The writer receives the raw source documents directly and writes from them. The challenger also receives the raw documents and checks claims against the prose. No intermediate compression step — both agents work from the original text.
+
+Both variants use the same clarifying loop, and the challenger's revision loop (up to 3 rounds) runs in both. The flag accepts multiple values so both variants can be compared in a single run:
+
+```
+python eval.py --bundles 001 002 003 004 005 --models haiku --pipeline full simple
+```
+
+The comparison table gains a `Variant` column so full vs simple results appear side by side.
+
+**A/B results on haiku across 5 bundles:**
+
+| Variant | Contradict avg | Questions avg | ReqFacts | Forbidden | Overall avg | Total cost |
+|---------|---------------|--------------|----------|-----------|-------------|------------|
+| full    | 0.73          | 0.64         | 1.00     | 1.00      | **0.84**    | $0.68      |
+| simple  | 0.62          | 0.74         | 1.00     | 1.00      | **0.84**    | $0.44      |
+
+Key findings:
+- Overall quality is identical at 0.84 average — the simple variant is competitive
+- Required fact recall and forbidden claim rate hold at 1.00 in both — the challenger-over-raw-docs firewall is effective enough to prevent hallucination on these bundles
+- Full wins on contradiction recall (0.73 vs 0.62) — structured facts make it easier to surface conflicts between documents
+- Simple wins on question recall (0.74 vs 0.64) — the clarifying loop sees full context rather than compressed facts, so it asks sharper questions
+- Simple is 34% cheaper ($0.44 vs $0.68 across 5 bundles) — savings come entirely from skipping the extractor API calls
+
 ## Multilingual support
 The pipeline always produced output in English regardless of the source document language. A language detection rule was added to all five prompts — if all documents share a language, the entire pipeline output (questions, facts, artifacts, challenger verdicts) is produced in that language; if documents are mixed-language, English is used as the fallback.

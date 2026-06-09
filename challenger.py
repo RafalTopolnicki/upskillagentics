@@ -120,14 +120,80 @@ def check_and_revise(facts: list[dict], artifacts: dict, qa_pairs: list[dict]) -
     return artifacts
 
 
+def build_challenger_prompt_from_docs(docs: list[dict], artifacts: dict) -> list[dict]:
+    from analysis_pass import build_docs_blocks
+    instruction = f"""You are a strict fact-checker. You will be given source project documents and two artifacts written from those documents.
+
+Your job: find every claim in the artifacts that is NOT supported by the source documents.
+
+## Project Brief
+{artifacts['project_brief']}
+
+## Implementation PRD
+{artifacts['implementation_prd']}
+
+Language rule: detect the language of the documents and artifacts. Respond (claims, notes) in that language. If mixed, use English.
+
+Rules:
+- A claim is supported if it can be directly traced to content in the source documents above.
+- A claim is NOT supported if it introduces information, numbers, decisions, or requirements not present in the documents.
+- Clarifications and assumptions explicitly labeled as such are allowed — do not flag those.
+- Be strict. If you are unsure whether a claim is supported, flag it."""
+    return [*build_docs_blocks(docs), {"type": "text", "text": instruction}]
+
+
+def run_challenger_from_docs(docs: list[dict], artifacts: dict) -> dict:
+    content = build_challenger_prompt_from_docs(docs, artifacts)
+
+    response = client.beta.messages.create(
+        model=MODEL,
+        max_tokens=MAX_TOKENS_CHALLENGER,
+        betas=["prompt-caching-2024-07-31"],
+        tools=[CHALLENGER_TOOL],
+        tool_choice={"type": "tool", "name": "submit_verdict"},
+        messages=[{"role": "user", "content": content}],
+    )
+
+    token_tracker.record_pipeline(response.usage)
+    tool_use = next(b for b in response.content if b.type == "tool_use")
+    return tool_use.input
+
+
+def check_and_revise_from_docs(docs: list[dict], artifacts: dict, qa_pairs: list[dict]) -> dict:
+    from writer import write_artifacts_from_docs
+
+    for attempt in range(1, MAX_REVISION_ROUNDS + 1):
+        print(f"[CHALLENGER-SIMPLE] Checking artifacts (attempt {attempt}/{MAX_REVISION_ROUNDS})...")
+        result = run_challenger_from_docs(docs, artifacts)
+
+        if result["verdict"] == "all_claims_supported":
+            print("[CHALLENGER-SIMPLE] All claims supported — output approved.")
+            return artifacts
+
+        issues = result.get("issues", [])
+        print(f"[CHALLENGER-SIMPLE] {len(issues)} unsupported claim(s) found:")
+        for issue in issues:
+            print(f"  CLAIM: {issue['claim']}")
+            print(f"  WHY:   {issue['note']}")
+
+        if attempt < MAX_REVISION_ROUNDS:
+            print("[CHALLENGER-SIMPLE] Sending issues back to writer for surgical revision...")
+            artifacts = write_artifacts_from_docs(docs, qa_pairs, issues=issues, previous_artifacts=artifacts)
+        else:
+            print(f"[CHALLENGER-SIMPLE] Max revisions reached — annotating {len(issues)} unverified claim(s) and saving.")
+            artifacts = annotate_artifacts(artifacts, issues)
+
+    return artifacts
+
+
 if __name__ == "__main__":
     from extractor import run_extraction
     from clarifying_loop import run_clarifying_loop
     from writer import write_artifacts
 
-    #folder = "project_description_agent_synthetic_dataset/bundle_001_internal_kb_chatbot"
+    folder = "project_description_agent_synthetic_dataset/bundle_001_internal_kb_chatbot"
     #folder = "project_description_agent_synthetic_dataset/bundle_002_invoice_processing_app"
-    folder = "project_description_agent_synthetic_dataset/bundle_006_orange"
+    #folder = "project_description_agent_synthetic_dataset/bundle_006_orange"
     #folder = "project_description_agent_synthetic_dataset/bundle_007_zabka"
 
 
