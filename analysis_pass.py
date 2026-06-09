@@ -5,7 +5,7 @@ import anthropic
 import fitz
 
 from dotenv import load_dotenv
-from config import DEV_MODE, PDF_PAGES_PER_CHUNK, PDF_OVERLAP_PAGES, MODEL, MAX_TOKENS_ANALYSIS
+from config import DEV_MODE, PDF_PAGES_PER_CHUNK, PDF_OVERLAP_PAGES, MODEL, MAX_TOKENS_ANALYSIS, language_rule
 import token_tracker
 
 load_dotenv()
@@ -100,21 +100,19 @@ def build_analysis_prompt(docs: list[dict]) -> list[dict]:
         *build_docs_blocks(docs),
         {
             "type": "text",
-            "text": """You are analyzing a set of project input documents shown above.
+            "text": f"""You are analyzing a set of project input documents shown above.
 
-LANGUAGE RULE: Detect the primary language of the source documents.
-- If all documents are in the same language, write ALL text values in that language — gaps, contradictions, and question text.
-- If documents are in multiple languages, use English.
-- The JSON keys (gaps, contradictions, clarifying_questions, topic, question) are always in English. Only the VALUES must be in the detected language.
+{language_rule("LANGUAGE RULE: Detect the primary language of the source documents. If all documents are in the same language, write ALL text values in that language — gaps, contradictions, and question text. If documents are in multiple languages, use English.")}
+The JSON keys (gaps, contradictions, clarifying_questions, topic, question) are always in English. Only the VALUES must be in the detected/forced language.
 
 Identify the following and return ONLY valid JSON, no prose:
-{
+{{
   "gaps": ["list of missing information or undefined requirements"],
   "contradictions": ["list of conflicts between documents"],
   "clarifying_questions": [
-    {"topic": "short_snake_case_tag", "question": "Full question text in the detected language?"}
+    {{"topic": "short_snake_case_tag", "question": "Full question text in the detected language?"}}
   ]
-}
+}}
 
 Each clarifying question must have a stable snake_case topic tag (e.g. "slack_mvp", "sso_required") and the full question text. Generate 3 to 7 questions.""",
         },

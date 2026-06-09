@@ -1,6 +1,6 @@
 import anthropic
 from dotenv import load_dotenv
-from config import MODEL, MAX_TOKENS_WRITER
+from config import MODEL, MAX_TOKENS_WRITER, language_rule
 import token_tracker
 
 load_dotenv()
@@ -79,7 +79,7 @@ Do NOT invent new information to justify a claim.
 ## Clarifications from the project lead
 {qa_text}
 
-Language rule: detect the language of the verified facts above (which reflect the source documents). Ignore the language of the clarification answers — they may be in a different language. If all facts are in the same language, write both artifacts in that language. If facts are in multiple languages, write in English.
+{language_rule("Language rule: detect the language of the verified facts above (which reflect the source documents). Ignore the language of the clarification answers — they may be in a different language. If all facts are in the same language, write both artifacts in that language. If facts are in multiple languages, write in English.")}
 
 Produce both artifacts now.
 
@@ -179,7 +179,7 @@ Do NOT invent new information to justify a claim.
 ## Clarifications from the project lead
 {qa_text}
 
-Language rule: detect the language of the verified facts above (which reflect the source documents). Ignore the language of the clarification answers — they may be in a different language. If all facts are in the same language, write both artifacts in that language. If facts are in multiple languages, write in English.
+{language_rule("Language rule: detect the language of the verified facts above (which reflect the source documents). Ignore the language of the clarification answers — they may be in a different language. If all facts are in the same language, write both artifacts in that language. If facts are in multiple languages, write in English.")}
 
 Produce both artifacts now.
 

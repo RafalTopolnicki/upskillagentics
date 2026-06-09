@@ -6,6 +6,18 @@ with open(os.path.join(os.path.dirname(__file__), "config.yaml")) as _f:
     _cfg = yaml.safe_load(_f)
 
 MODEL = _cfg["model"]
+LANGUAGE = _cfg.get("language", "auto")  # "auto", "english", or "polish"
+
+_FORCED_LANGUAGE_NAMES = {"english": "English", "polish": "Polish"}
+
+
+def language_rule(auto_instruction: str) -> str:
+    """Return the language instruction for a prompt.
+    When LANGUAGE is forced, overrides auto_instruction with a simple directive."""
+    name = _FORCED_LANGUAGE_NAMES.get(LANGUAGE)
+    if name:
+        return f"Language rule: write in {name} regardless of the source document language."
+    return auto_instruction
 DEV_MODE = bool(_cfg.get("dev_mode", False))
 PDF_PAGES_PER_CHUNK = int(_cfg.get("pdf_pages_per_chunk", 15))
 PDF_OVERLAP_PAGES = int(_cfg.get("pdf_overlap_pages", 1))

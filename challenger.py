@@ -1,7 +1,7 @@
 import os
 import anthropic
 from dotenv import load_dotenv
-from config import MAX_REVISION_ROUNDS, MODEL, MAX_TOKENS_CHALLENGER
+from config import MAX_REVISION_ROUNDS, MODEL, MAX_TOKENS_CHALLENGER, language_rule
 import token_tracker
 
 load_dotenv()
@@ -59,7 +59,7 @@ Your job: find every claim in the artifacts that is NOT supported by the fact li
 ## Implementation PRD
 {artifacts['implementation_prd']}
 
-Language rule: detect the language of the facts and artifacts. Respond (claims, notes) in that language. If mixed, use English.
+{language_rule("Language rule: detect the language of the facts and artifacts. Respond (claims, notes) in that language. If mixed, use English.")}
 
 Rules:
 - A claim is supported if it can be directly traced to one or more facts above.
@@ -133,7 +133,7 @@ Your job: find every claim in the artifacts that is NOT supported by the source 
 ## Implementation PRD
 {artifacts['implementation_prd']}
 
-Language rule: detect the language of the documents and artifacts. Respond (claims, notes) in that language. If mixed, use English.
+{language_rule("Language rule: detect the language of the documents and artifacts. Respond (claims, notes) in that language. If mixed, use English.")}
 
 Rules:
 - A claim is supported if it can be directly traced to content in the source documents above.
@@ -188,23 +188,33 @@ def check_and_revise_from_docs(docs: list[dict], artifacts: dict, qa_pairs: list
 
 
 if __name__ == "__main__":
+    import argparse
+    import config as _config
+
+    parser = argparse.ArgumentParser(description="Run the full project description pipeline.")
+    parser.add_argument("--folder", required=True, help="Path to the bundle folder, e.g. project_description_agent_synthetic_dataset/bundle_006_orange")
+    parser.add_argument(
+        "--language", choices=["auto", "english", "polish"], default=None,
+        help="Output language: auto detects from source docs, english/polish force the language. Overrides config.yaml.",
+    )
+    args = parser.parse_args()
+
+    if args.language is not None:
+        _config.LANGUAGE = args.language
+    folder = args.folder
+
     from extractor import run_extraction
     from clarifying_loop import run_clarifying_loop
     from writer import write_artifacts
+    from config import make_output_dir
 
-    #folder = "project_description_agent_synthetic_dataset/bundle_001_internal_kb_chatbot"
-    #folder = "project_description_agent_synthetic_dataset/bundle_002_invoice_processing_app"
-    folder = "project_description_agent_synthetic_dataset/bundle_006_orange"
-    #folder = "project_description_agent_synthetic_dataset/bundle_007_zabka"
-
+    print(f"[PIPELINE] Bundle: {folder} | Language: {args.language}")
 
     extraction = run_extraction(folder)
     context = run_clarifying_loop(folder)
     initial_artifacts = write_artifacts(extraction["facts"], context["qa_pairs"])
-
     final_artifacts = check_and_revise(extraction["facts"], initial_artifacts, context["qa_pairs"])
 
-    from config import make_output_dir
     out = make_output_dir(folder)
     with open(os.path.join(out, "project_brief.md"), "w") as f:
         f.write(final_artifacts["project_brief"])

@@ -3,7 +3,7 @@ import os
 import anthropic
 from dotenv import load_dotenv
 from analysis_pass import load_bundle, build_docs_blocks, log_cache_usage
-from config import MODEL, MAX_TOKENS_EXTRACTOR
+from config import MODEL, MAX_TOKENS_EXTRACTOR, language_rule
 import token_tracker
 
 load_dotenv()
@@ -65,9 +65,9 @@ def build_extraction_prompt(docs: list[dict]) -> list[dict]:
         *build_docs_blocks(docs),
         {
             "type": "text",
-            "text": """Extract every distinct requirement, constraint, or decision that is explicitly stated in the source documents shown above.
+            "text": f"""Extract every distinct requirement, constraint, or decision that is explicitly stated in the source documents shown above.
 
-Language rule: detect the language of the source documents. If all documents are in the same language, write facts and quotes in that language. If documents are in multiple languages, use English.
+{language_rule("Language rule: detect the language of the source documents. If all documents are in the same language, write facts and quotes in that language. If documents are in multiple languages, use English.")}
 
 Rules:
 - Each fact must be atomic (one requirement per fact).

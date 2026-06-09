@@ -1,6 +1,9 @@
 # Model used across the entire pipeline — swap to claude-sonnet-4-6 for higher quality
 model: claude-haiku-4-5-20251001
 
+# Output language: "auto" detects from source documents, "english" or "polish" force the language
+language: polish
+
 # Set to true to use fitz text extraction instead of native Claude PDF vision (cheaper for development)
 dev_mode: false
 
@@ -21,8 +24,8 @@ max_revision_rounds: 3
 
 # Output token limits per agent
 max_tokens:
-  analysis: 4096
-  clarify: 1024
+  analysis: 16384
+  clarify: 16384
   extractor: 16384
-  writer: 8192
-  challenger: 2048
+  writer: 16384
+  challenger: 16384
