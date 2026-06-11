@@ -15,19 +15,23 @@ client = anthropic.Anthropic()
 SKIP_FILES = {"expected_findings.json", "dataset_manifest.json"}
 
 
-def _split_pdf(path: str) -> list[dict]:
+def _split_pdf(path: str, pages_per_chunk: int = None, overlap: int = None) -> list[dict]:
+    if pages_per_chunk is None:
+        pages_per_chunk = PDF_PAGES_PER_CHUNK
+    if overlap is None:
+        overlap = PDF_OVERLAP_PAGES
     doc = fitz.open(path)
     total = len(doc)
     basename = os.path.basename(path)
     chunks = []
-    for start in range(0, total, PDF_PAGES_PER_CHUNK):
-        end = min(start + PDF_PAGES_PER_CHUNK, total)
+    for start in range(0, total, pages_per_chunk):
+        end = min(start + pages_per_chunk, total)
         # overlap_start pulls in trailing pages from the previous chunk so facts
         # that straddle a chunk boundary are visible to both adjacent extractors
-        overlap_start = max(0, start - PDF_OVERLAP_PAGES)
+        overlap_start = max(0, start - overlap)
         chunk = fitz.open()
         chunk.insert_pdf(doc, from_page=overlap_start, to_page=end - 1)
-        if total <= PDF_PAGES_PER_CHUNK:
+        if total <= pages_per_chunk:
             label = basename
         elif overlap_start < start:
             label = f"{basename} (pages {start+1}-{end}, context: {overlap_start+1}-{start})"
@@ -147,6 +151,11 @@ def run_analysis(folder: str) -> dict:
         if raw.startswith("json"):
             raw = raw[4:]
         raw = raw.rsplit("```", 1)[0].strip()
+    if not raw:
+        raise ValueError(
+            "Claude returned an empty response — the selected folder probably doesn't contain "
+            "real project documents. Make sure you selected a bundle folder, not the project root."
+        )
     result = json.loads(raw)
     print(f"[ANALYSIS] Found {len(result.get('gaps', []))} gap(s), {len(result.get('contradictions', []))} contradiction(s), {len(result.get('clarifying_questions', []))} question(s)")
     return result

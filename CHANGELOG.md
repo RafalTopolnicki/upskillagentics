@@ -68,3 +68,30 @@ Key findings:
 
 ## Multilingual support
 The pipeline always produced output in English regardless of the source document language. A language detection rule was added to all five prompts — if all documents share a language, the entire pipeline output (questions, facts, artifacts, challenger verdicts) is produced in that language; if documents are mixed-language, English is used as the fallback.
+
+## Streamlit UI
+The pipeline was only runnable via CLI, requiring manual config edits and command-line knowledge. A full web UI was added in `app.py` using Streamlit. The UI implements the same pipeline as a step-by-step state machine (ready → analysing → qa → running → done) with live progress updates via `st.status`. Key features:
+
+- **Folder picker**: text input with a Browse button that opens a native OS folder dialog via `tkinter`, so any directory on the machine can be selected without typing paths
+- **Parameter controls**: model, output language, dev mode, PDF chunk size, overlap pages, max clarify rounds, and max revision rounds — all configurable from the sidebar without touching `config.yaml`
+- **Clarifying question modes**: radio button with three options — *Ask me* (interactive form, one round at a time), *Auto-answer* (all questions receive a user-defined generic reply, Q&A stage skipped), *Skip* (no Q&A at all, writer works from facts only)
+- **Output tabs**: Project Brief, Implementation PRD, and Extracted Facts — with download buttons for the two artifacts
+- **Reset button**: clears all session state and returns to the start
+
+## Similar projects search
+There was no way to contextualise a new project against the company's history. A similarity search feature was added to find the 3 most similar historical projects from a folder of past project PowerPoint presentations (`TPX_Projects/`).
+
+**Indexing pipeline** (`similar_projects.py`), run once and updated incrementally:
+1. PPTX → PDF conversion via LibreOffice headless (only files without an existing PDF are converted)
+2. All PDFs in a project subfolder are sent together to Claude with vision — Claude reads slides visually, capturing diagrams, charts, and layout, not just text
+3. Claude produces a ~200-word project summary per subfolder (multiple PPTXs in the same folder are combined into one summary)
+4. The summary is encoded into a vector using `sentence-transformers` (`all-MiniLM-L6-v2`)
+5. Results saved to `TPX_Projects/tpx_index.json` — subsequent runs only process new projects
+
+**Similarity search** (runs per bundle after output is generated):
+1. The generated Project Brief is encoded with the same embedding model
+2. Cosine similarity is computed against all indexed project vectors
+3. Top 3 matches are selected
+4. The top 3 summaries + current brief are sent to Claude, which explains the specific similarities
+
+**UI integration**: the sidebar shows live index status (how many projects are indexed, how many PPTXs need conversion) and buttons to convert and index. A "Similar Projects" tab appears in the done stage alongside the Brief, PRD, and Facts tabs.
