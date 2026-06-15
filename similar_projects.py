@@ -87,27 +87,49 @@ def _pages_as_jpeg_blocks(pdf_paths: list[str]) -> list[dict]:
     return blocks
 
 
-def _summarize_project(pdf_paths: list[str]) -> str:
-    """Render slide pages as JPEG and ask Claude for a ~200-word project summary."""
+def _summarize_project(pdf_paths: list[str]) -> dict:
+    """Render slide pages as JPEG and ask Claude for a summary + team members.
+
+    Returns {"summary": str, "team_members": list[str]}.
+    """
     client = anthropic.Anthropic()
     blocks = _pages_as_jpeg_blocks(pdf_paths)
     prompt = """You are summarizing a company project presentation for a similarity search index.
 
-Write a concise 150-200 word summary covering:
-- What problem this project solved
-- What was built (system, product, or service)
-- The industry or business domain
-- Key technologies or methodologies used
-- The client or business context (if mentioned)
+Return a JSON object with exactly two keys:
 
-Be specific and factual. Do not invent details not visible in the slides."""
+"summary": A concise 150-200 word summary covering:
+  - What problem this project solved
+  - What was built (system, product, or service)
+  - The industry or business domain
+  - Key technologies or methodologies used
+  - The client or business context (if mentioned)
+
+"team_members": A list of full names of people mentioned as working on this project
+  (look for slides titled "Current team", "Team", "Our team", "Project team", or similar).
+  Include only names clearly attributed to the project team — exclude client names or speakers.
+  Use an empty list [] if no team names are visible.
+
+Be specific and factual. Do not invent details not visible in the slides.
+Respond with valid JSON only, no markdown fences."""
 
     response = client.messages.create(
         model=_config.MODEL,
-        max_tokens=512,
+        max_tokens=768,
         messages=[{"role": "user", "content": [*blocks, {"type": "text", "text": prompt}]}],
     )
-    return response.content[0].text.strip()
+    raw = response.content[0].text.strip()
+    # Strip markdown fences if the model adds them despite instructions
+    if raw.startswith("```"):
+        raw = raw.split("```", 2)[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.rsplit("```", 1)[0].strip()
+    data = json.loads(raw)
+    return {
+        "summary": data.get("summary", ""),
+        "team_members": data.get("team_members", []),
+    }
 
 
 # ── Embedding ─────────────────────────────────────────────────────────────────
@@ -169,14 +191,15 @@ def build_index(tpx_dir: str, progress_cb=None) -> int:
         if progress_cb:
             progress_cb(f"Summarising {entry.name} ({len(pdfs)} PDF(s))...")
 
-        summary = _summarize_project(pdfs)
-        embedding = _embed(summary)
+        result = _summarize_project(pdfs)
+        embedding = _embed(result["summary"])
 
         index.append({
             "project_name": entry.name,
             "subdir": entry.path,
             "pdfs": [os.path.basename(p) for p in pdfs],
-            "summary": summary,
+            "summary": result["summary"],
+            "team_members": result["team_members"],
             "embedding": embedding,
         })
         new_count += 1
@@ -265,6 +288,7 @@ Format as a numbered list matching the order above."""}],
                 "project_name": m["project_name"],
                 "score": round(_cosine(query_vec, m["embedding"]), 3),
                 "summary": m["summary"],
+                "team_members": m.get("team_members", []),
             }
             for m in top
         ],

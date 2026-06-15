@@ -430,3 +430,6 @@ elif s.stage == "done":
                 for match in result["matches"]:
                     with st.expander(f"{match['project_name']}  —  score: {match['score']}"):
                         st.markdown(match["summary"])
+                        team = match.get("team_members", [])
+                        if team:
+                            st.markdown("**Team:** " + ", ".join(team))
