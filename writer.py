@@ -38,16 +38,12 @@ WRITING_TOOL = {
 
 def build_writing_prompt(
     facts: list[dict],
-    qa_pairs: list[dict],
     issues: list[dict] | None = None,
     previous_artifacts: dict | None = None,
 ) -> str:
     facts_text = "\n".join(
         f"- [{fact['source']}] {fact['fact']}\n  Quote: \"{fact['quote']}\""
         for fact in facts
-    )
-    qa_text = "\n".join(
-        f"Q: {qa['question']}\nA: {qa['answer']}" for qa in qa_pairs
     )
     issues_section = ""
     if issues and previous_artifacts:
@@ -71,28 +67,20 @@ Do NOT invent new information to justify a claim.
 
 {issues_text}
 """
-    return f"""You are producing two artifacts from a set of verified project facts and clarifications.{issues_section}
+    return f"""You are producing two artifacts from a set of verified project facts.{issues_section}
 
-## Verified facts (each grounded in a source document)
+## Verified facts (each grounded in a source document or clarification)
 {facts_text}
 
-## Clarifications from the project lead
-{qa_text}
-
-{language_rule("Language rule: detect the language of the verified facts above (which reflect the source documents). Ignore the language of the clarification answers — they may be in a different language. If all facts are in the same language, write both artifacts in that language. If facts are in multiple languages, write in English.")}
+{language_rule("Language rule: detect the language of the verified facts above. If all facts are in the same language, write both artifacts in that language. If facts are in multiple languages, write in English.")}
 
 Produce both artifacts now.
 
 Rules that apply to BOTH artifacts:
-- Only use information present in the facts list or clarifications above.
+- Only use information present in the facts list above.
 - Do not invent requirements, constraints, or technical decisions.
 - If something was not confirmed, list it as an open assumption or open question.
-
-OVERRIDE RULE — this is the most important rule:
-If a clarification contradicts a fact from the source documents, the clarification ALWAYS wins.
-Treat the contradicted fact as if it does not exist. Do not mention it, include it, or hedge between the two versions.
-Example: if a source doc says "Slack is required" but the clarification says "browser-only for now",
-then Slack is NOT a requirement — do not include it anywhere in either artifact.
+- Facts with source="clarification" are direct answers from the project lead and take priority over document facts on the same topic.
 
 ### Project Brief
 Written for a non-technical stakeholder. 300-500 words. Sections:
@@ -116,15 +104,14 @@ Be explicit and structured. Sections:
 
 def write_artifacts(
     facts: list[dict],
-    qa_pairs: list[dict],
     issues: list[dict] | None = None,
     previous_artifacts: dict | None = None,
 ) -> dict:
     if issues:
         print(f"[WRITER] Revising artifacts — fixing {len(issues)} unsupported claim(s) (surgical rewrite)...")
     else:
-        print(f"[WRITER] Writing artifacts from {len(facts)} fact(s) and {len(qa_pairs)} Q&A pair(s)...")
-    prompt = build_writing_prompt(facts, qa_pairs, issues, previous_artifacts)
+        print(f"[WRITER] Writing artifacts from {len(facts)} fact(s)...")
+    prompt = build_writing_prompt(facts, issues, previous_artifacts)
 
     response = client.messages.create(
         model=MODEL,
@@ -254,10 +241,10 @@ if __name__ == "__main__":
 
     folder = "project_description_agent_synthetic_dataset/bundle_001_internal_kb_chatbot"
 
-    extraction = run_extraction(folder)
     context = run_clarifying_loop(folder)
+    extraction = run_extraction(folder, qa_pairs=context["qa_pairs"])
 
-    artifacts = write_artifacts(extraction["facts"], context["qa_pairs"])
+    artifacts = write_artifacts(extraction["facts"])
 
     print("\n=== PROJECT BRIEF ===\n")
     print(artifacts["project_brief"])

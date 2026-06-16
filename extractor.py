@@ -60,13 +60,22 @@ EXTRACTION_TOOL = {
 }
 
 
-def build_extraction_prompt(docs: list[dict]) -> list[dict]:
+def build_extraction_prompt(docs: list[dict], qa_pairs: list[dict] | None = None) -> list[dict]:
+    qa_section = ""
+    if qa_pairs:
+        qa_text = "\n".join(f"Q: {qa['question']}\nA: {qa['answer']}" for qa in qa_pairs)
+        qa_section = f"""
+## Clarifications from the project lead (these override the source documents)
+{qa_text}
+
+If a document states something directly contradicted by a clarification above, skip that document fact entirely — do not extract it.
+"""
     return [
         *build_docs_blocks(docs),
         {
             "type": "text",
             "text": f"""Extract every distinct requirement, constraint, or decision that is explicitly stated in the source documents shown above.
-
+{qa_section}
 {language_rule("Language rule: detect the language of the source documents. If all documents are in the same language, write facts and quotes in that language. If documents are in multiple languages, use English.")}
 
 Rules:
@@ -78,9 +87,9 @@ Rules:
     ]
 
 
-def _extract_from_doc(doc: dict, index: int, total: int) -> list[dict]:
+def _extract_from_doc(doc: dict, index: int, total: int, qa_pairs: list[dict] | None = None) -> list[dict]:
     tag = f"EXTRACTOR-{index+1}/{total}"
-    content = build_extraction_prompt([doc])
+    content = build_extraction_prompt([doc], qa_pairs)
 
     response = client.beta.messages.create(
         model=MODEL,
@@ -112,8 +121,39 @@ def _extract_from_doc(doc: dict, index: int, total: int) -> list[dict]:
     return facts
 
 
-def run_extraction(folder: str, use_cache: bool = True) -> dict:
-    if use_cache:
+def _extract_qa_facts(qa_pairs: list[dict]) -> list[dict]:
+    """Convert Q&A clarifications into structured facts with source='clarification'."""
+    if not qa_pairs:
+        return []
+    qa_text = "\n".join(f"Q: {qa['question']}\nA: {qa['answer']}" for qa in qa_pairs)
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=MAX_TOKENS_EXTRACTOR,
+        tools=[EXTRACTION_TOOL],
+        tool_choice={"type": "tool", "name": "submit_facts"},
+        messages=[{"role": "user", "content": f"""Convert these Q&A clarifications into structured facts.
+
+{qa_text}
+
+For each answer that provides a concrete requirement, constraint, or decision:
+- Extract it as an atomic fact
+- Use "clarification" as the source
+- Use the answer text as the quote
+
+Skip vague answers like "no preference", "no answer available", or answers that add no concrete information."""}],
+    )
+    token_tracker.record_pipeline(response.usage)
+    tool_use = next(b for b in response.content if b.type == "tool_use")
+    facts = tool_use.input["facts"]
+    for f in facts:
+        f["source"] = "clarification"
+    print(f"[EXTRACTOR] Extracted {len(facts)} fact(s) from Q&A clarifications")
+    return facts
+
+
+def run_extraction(folder: str, qa_pairs: list[dict] | None = None, use_cache: bool = True) -> dict:
+    # Bypass cache when Q&A is provided — the fact list depends on clarifications
+    if use_cache and not qa_pairs:
         cached = _load_cache(folder)
         if cached is not None:
             print(f"[EXTRACTOR] Loaded {len(cached)} fact(s) from cache (skipping API calls)")
@@ -125,10 +165,14 @@ def run_extraction(folder: str, use_cache: bool = True) -> dict:
 
     all_facts = []
     for i, doc in enumerate(docs):
-        all_facts.extend(_extract_from_doc(doc, i, len(docs)))
+        all_facts.extend(_extract_from_doc(doc, i, len(docs), qa_pairs))
+
+    if qa_pairs:
+        all_facts.extend(_extract_qa_facts(qa_pairs))
 
     print(f"[EXTRACTOR] Total: {len(all_facts)} fact(s) extracted")
-    _save_cache(folder, all_facts)
+    if not qa_pairs:
+        _save_cache(folder, all_facts)
     return {"docs": docs, "facts": all_facts}
 
 

@@ -52,10 +52,10 @@ def run_pipeline(folder: str, model_id: str) -> dict:
     from writer import write_artifacts
     from challenger import check_and_revise
 
-    extraction = run_extraction(folder, use_cache=False)
     context = run_clarifying_loop(folder)
-    initial_artifacts = write_artifacts(extraction["facts"], context["qa_pairs"])
-    final_artifacts = check_and_revise(extraction["facts"], initial_artifacts, context["qa_pairs"])
+    extraction = run_extraction(folder, qa_pairs=context["qa_pairs"], use_cache=False)
+    initial_artifacts = write_artifacts(extraction["facts"])
+    final_artifacts = check_and_revise(extraction["facts"], initial_artifacts)
 
     return {
         "analysis": context["analysis"],

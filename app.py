@@ -332,16 +332,16 @@ elif s.stage == "running":
             from config import make_output_dir
 
             st.write("Extracting facts from documents...")
-            extraction = run_extraction(s.bundle)
+            extraction = run_extraction(s.bundle, qa_pairs=s.qa_pairs)
             s.facts = extraction["facts"]
             st.write(f"Done — {len(s.facts)} facts extracted")
 
             st.write("Writing Project Brief and Implementation PRD...")
-            artifacts = write_artifacts(s.facts, s.qa_pairs)
+            artifacts = write_artifacts(s.facts)
             st.write("Done — artifacts written")
 
             st.write("Challenging claims against source facts...")
-            artifacts = check_and_revise(s.facts, artifacts, s.qa_pairs)
+            artifacts = check_and_revise(s.facts, artifacts)
             st.write("Done — claims verified")
 
             st.write("Saving output to disk...")

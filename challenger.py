@@ -94,7 +94,7 @@ def annotate_artifacts(artifacts: dict, issues: list[dict]) -> dict:
     }
 
 
-def check_and_revise(facts: list[dict], artifacts: dict, qa_pairs: list[dict]) -> dict:
+def check_and_revise(facts: list[dict], artifacts: dict) -> dict:
     from writer import write_artifacts  # local import avoids circular dependency at module load
 
     for attempt in range(1, MAX_REVISION_ROUNDS + 1):
@@ -113,7 +113,7 @@ def check_and_revise(facts: list[dict], artifacts: dict, qa_pairs: list[dict]) -
 
         if attempt < MAX_REVISION_ROUNDS:
             print(f"[CHALLENGER] Sending issues back to writer for surgical revision...")
-            artifacts = write_artifacts(facts, qa_pairs, issues=issues, previous_artifacts=artifacts)
+            artifacts = write_artifacts(facts, issues=issues, previous_artifacts=artifacts)
         else:
             print(f"[CHALLENGER] Max revisions reached — annotating {len(issues)} unverified claim(s) and saving.")
             artifacts = annotate_artifacts(artifacts, issues)
@@ -210,10 +210,10 @@ if __name__ == "__main__":
 
     print(f"[PIPELINE] Bundle: {folder} | Language: {args.language}")
 
-    extraction = run_extraction(folder)
     context = run_clarifying_loop(folder)
-    initial_artifacts = write_artifacts(extraction["facts"], context["qa_pairs"])
-    final_artifacts = check_and_revise(extraction["facts"], initial_artifacts, context["qa_pairs"])
+    extraction = run_extraction(folder, qa_pairs=context["qa_pairs"])
+    initial_artifacts = write_artifacts(extraction["facts"])
+    final_artifacts = check_and_revise(extraction["facts"], initial_artifacts)
 
     out = make_output_dir(folder)
     with open(os.path.join(out, "project_brief.md"), "w") as f:
