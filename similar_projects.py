@@ -168,16 +168,17 @@ def _save_index(tpx_dir: str, index: list[dict]) -> None:
 
 
 def build_index(tpx_dir: str, progress_cb=None) -> int:
-    """Summarise and embed any project subdir not yet in the index.
-    Returns number of newly indexed projects."""
+    """Summarise and embed any project subdir not yet in the index, or missing team_members.
+    Returns number of newly indexed or updated projects."""
     index = load_index(tpx_dir)
-    indexed_names = {e["project_name"] for e in index}
+    complete_names = {e["project_name"] for e in index if "team_members" in e}
+    index = [e for e in index if "team_members" in e]  # drop stale entries so they get reprocessed
     new_count = 0
 
     for entry in sorted(os.scandir(tpx_dir), key=lambda e: e.name):
         if not entry.is_dir():
             continue
-        if entry.name in indexed_names:
+        if entry.name in complete_names:
             continue
 
         pdfs = sorted([
